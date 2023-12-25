@@ -171,20 +171,25 @@ class Seq2SeqTrainerTali(Seq2SeqTrainer):
 
 # %%
 
+def init_tokenizer(TOKENIZER_INPATH, FILES):
+    '''Note that if we are using a pretrained tokenizer,
+    we should simply pass the HF key of the model as TOKENIZER_INPATH'''
 
-def init_models(ENC_DEC_MODELPATH, TOKENIZER_INPATH, PT_CKPT = None):
-    '''Get seq2seq model'''
-    # Initialize LID model
-    # - LID_MODELPATH
     logging.info("Loading src tokenizer from {}".format(TOKENIZER_INPATH))
-    tokenizer = get_tokenizers.train_or_load_tokenizer(TOKENIZER_INPATH)
-    
+    tokenizer = get_tokenizers.train_or_load_tokenizer(TOKENIZER_INPATH,  \
+        FILES = FILES)
     # Looks like HF MT doesn't support separate source and target tokenizers
     # logging.info("Loading tgt tokenizer from {}".format(TGT_TOKENIZER_INPATH))
     # tgt_tokenizer = get_tokenizers.train_or_load_tokenizer(TGT_TOKENIZER_INPATH, tokenizer)
 
     ### Optionally add language ID tokens
     # tokenizer = get_tokenizers.add_langid_tokens(tokenizer, LANGS)
+
+    
+    return tokenizer
+
+def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
+    '''Get seq2seq model'''
 
     # Initialize Seq2Seq model, input and output tokenizer, special hyperparameters
     if PT_CKPT:
@@ -198,9 +203,10 @@ def init_models(ENC_DEC_MODELPATH, TOKENIZER_INPATH, PT_CKPT = None):
     else:
         # If not, we initialize the encoder and decoder from scratch
         logging.info("Initializing encoder-decoder model from scratch")
-        encoder_config = BertConfig(vocab_size=len(tokenizer)) # Add in config - num_layers, etc.
-        decoder_config = BertConfig(vocab_size=len(tokenizer)) # Add in config - num_layers, etc.
+        encoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers= 6) # Add in config - num_hidden_layers, etc.
+        decoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6) # Add in config - num_hidden_layers, etc.
         model_enc_dec = EncoderDecoderModelNew.from_encoder_decoder_configs(encoder_config, decoder_config)
+
 
     ## Set model parameters
     # model_enc_dec.model_lid = model_lid
@@ -220,7 +226,7 @@ def init_models(ENC_DEC_MODELPATH, TOKENIZER_INPATH, PT_CKPT = None):
     model_enc_dec.config.decoder_start_token_id = tokenizer.cls_token_id
     model_enc_dec.config.pad_token_id = tokenizer.pad_token_id
 
-    return model_enc_dec, tokenizer
+    return model_enc_dec
 
 
 
@@ -267,6 +273,10 @@ def get_dataset_split(DATAFILE_L1, DATAFILE_L2, max_lines, tokenizer, max_length
 
 def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 512):
 
+    '''
+    This function assumes that the datadir contains train, dev, and test splits, 
+    called "train", "dev", and "test"
+    '''
     # splits = {"train", "test", "dev"}
 
     def get_split(split):
@@ -308,14 +318,21 @@ def main(args):
         script = "dev"
 
     # Get seq2seq model and tokenizer
+    logging.info("Initializing tokenizer...")
+    FILES = [os.path.join(args.DATADIR_L1, "train"),\
+             os.path.join(args.DATADIR_L2, "train"),\
+                os.path.join(args.DATADIR_L1, "dev"),\
+                    os.path.join(args.DATADIR_L2, "dev")]
+    tokenizer = init_tokenizer(args.TOKENIZER_INPATH, \
+                               FILES)
+
     logging.info("Initializing models...")
-    model_enc_dec, tokenizer = init_models(args.ENC_DEC_MODELPATH, args.TOKENIZER_INPATH, args.PT_CKPT,\
-                                            args.force_p_gen)
+    model_enc_dec = init_models(args.ENC_DEC_MODELPATH, tokenizer, args.PT_CKPT)
     
     logging.info("Getting datasets...")
     # Get dataset splits, and preprocess them
     train_dataset, dev_dataset, test_dataset = \
-    get_mt_dataset(args.TRAIN_FILE_L1, args.TRAIN_FILE_L2, max_lines=args.max_lines, tokenizer= tokenizer, max_length= args.max_length)
+    get_mt_dataset(args.DATADIR_L1, args.DATADIR_L2, max_lines=args.max_lines, tokenizer= tokenizer, max_length= args.max_length)
     
     # Instead of that, download some MT dataset from HF
     # tokenizer = AutoTokenizer.from_pretrained(args.ENC_DEC_MODELPATH)
@@ -429,8 +446,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--TRAIN_FILE_L1", type=str, default=None)
-    parser.add_argument("--TRAIN_FILE_L2", type=str, default=None)
+    parser.add_argument("--DATADIR_L1", type=str, default=None)
+    parser.add_argument("--DATADIR_L2", type=str, default=None)
     parser.add_argument("--ENC_DEC_MODELPATH", type=str, default=None, help="Path to encoder model to initalize encoder/decoder (separately)")
     parser.add_argument("--TOKENIZER_INPATH", type=str, default=None, help="Path to tokenizer - if self-trained, put path. If None, \
                         the tokenizer from the encoder model will be used")

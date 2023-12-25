@@ -25,18 +25,22 @@ max_lines_all=(15000 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
-MODEL_NAME="expname~l1-l2-epochs~$epochs-max_lines~$max_lines"
+EXP_ID="expname"
+MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
+TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
 
-OUTPUT_DIR="models/$MODEL_NAME"
+MODEL_OUTPUT_DIR="models/$MODEL_NAME"
+TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
 LOG_DIR="logs/$MODEL_NAME"
 mkdir -p $OUTPUT_DIR
 mkdir -p $LOG_DIR
 
 
 python train.py --ENC_DEC_MODELPATH dccuchile/bert-base-spanish-wwm-uncased \
---TRAIN_FILE_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es \
---TRAIN_FILE_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca \
---OUTPUT_DIR $OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
+--DATADIR_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es \
+--DATADIR_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca \
+--TOKENIZER_INPATH $TOKENIZER_INPATH \
+--OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines
 
 

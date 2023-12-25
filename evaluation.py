@@ -114,37 +114,37 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True)#, device=0)
 
     # Save MT outputs
-    scores = {"bho":{}, "mag":{}}
-    for lang in ["bho", "mag"]:
+    # scores = {"bho":{}, "mag":{}}
+    # for lang in ["bho", "mag"]:
 
-        print(f"Evaluating...")
-        # hrl_sents, lrl_sents = \
-            # eval_datareader.get_data_mt(eval_datapath, lang, SEED = SEED)
-        dataset = load_dataset("text", data_files={"source": [DATAFILE_L1], \
-                "target": [DATAFILE_L2]})
+    print(f"Evaluating...")
+    # hrl_sents, lrl_sents = \
+        # eval_datareader.get_data_mt(eval_datapath, lang, SEED = SEED)
+    dataset = load_dataset("text", data_files={"source": [DATAFILE_L1], \
+            "target": [DATAFILE_L2]})
+
+    # Create a new dataset that has source and target as columns
+    dataset = Dataset.from_dict({"source": dataset["source"]["text"], "target": dataset["target"]["text"]})
+
+    pred_sents = list()
+    for output in tqdm(pipe(KeyDataset(dataset, "source"), max_length = 512, truncation = True)):        
+        pred_sents.append(output["translation_text"])
+
     
-        # Create a new dataset that has source and target as columns
-        dataset = Dataset.from_dict({"source": dataset["source"]["text"], "target": dataset["target"]["text"]})
+    output_path = os.path.join(output_dir, "preds.txt") #if not charbleu else os.path.join(output_dir, lang+"_preds_charbleu.txt")
+    with open(output_path, "w") as f:
+        f.write("\n".join(pred_sents))
 
-        pred_sents = list()
-        for output in tqdm(pipe(KeyDataset(dataset, "source"), max_length = 512, truncation = True)):        
-            pred_sents.append(output["translation_text"])
-
-        
-        output_path = os.path.join(output_dir, lang+"_preds.txt") #if not charbleu else os.path.join(output_dir, lang+"_preds_charbleu.txt")
-        with open(output_path, "w") as f:
-            f.write("\n".join(pred_sents))
-
-        if charbleu:
-            # Put space after each character
-            pred_sents = [" ".join(list(pred_sent)) for pred_sent in pred_sents]
-            true_sents = [[" ".join(list(true_sent[0]))] for true_sent in true_sents]
-        
-        # Find BLEU score
-        bleu = evaluate.load("bleu")
-        bleu_score = bleu.compute(predictions=pred_sents, references=true_sents, max_order=max_order)
-        print(f"BLEU: {bleu_score}")
-        scores[lang] = bleu_score
+    if charbleu:
+        # Put space after each character
+        pred_sents = [" ".join(list(pred_sent)) for pred_sent in pred_sents]
+        true_sents = [[" ".join(list(true_sent[0]))] for true_sent in true_sents]
+    
+    # Find BLEU score
+    bleu = evaluate.load("bleu")
+    bleu_score = bleu.compute(predictions=pred_sents, references=true_sents, max_order=max_order)
+    print(f"BLEU: {bleu_score}")
+    # scores[lang] = bleu_score
 
     
     # Save inputs
@@ -158,7 +158,8 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
 
 
 def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, transformed_datapath, save_results = True, charbleu = False, SEED = 42):
-    '''Runs evaluation for MT, also saves the results automatically in experiment records
+    '''Runs evaluation for MT if predictions (and true sents) are already saved in some file
+    Also saves the results automatically in experiment records
     eval_datapath: eval DIR to the MT parallel data'''
 
     print("Evaluating MT! ")
@@ -189,15 +190,17 @@ def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, transformed_datapath, save
     scores = bleu.compute(predictions=pred_sents, references=true_sents, max_order=max_order)
     print("Score: ", scores)
 
-    if save_results:
-        RECORD_FILE = "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt.json" \
-            if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-        save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE= RECORD_FILE)
+    # if save_results:
+    #     RECORD_FILE = "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt.json" \
+    #         if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
+    #     save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE= RECORD_FILE)
 
 
 
 def save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE = None):
-
+    '''
+    Hard code the outputs file path
+    '''
     if not RECORD_FILE:
         RECORD_FILE = "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_pos.json"
 
