@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#$ -N expname
-#$ -wd /export/b08/nbafna1/projects/mt_hw_skeleton/
+#$ -N basic
+#$ -wd /export/b08/nbafna1/projects/mt_hf_skeleton/
 #$ -m e
-#$ -t 1-3
-#$ -j y -o qsub_logs/expname_$TASK_ID.out
+#$ -t 1
+#$ -j y -o qsub_logs/basic_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -25,20 +25,21 @@ max_lines_all=(15000 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
-EXP_ID="expname"
+EXP_ID="basic"
 MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
 TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
 LOG_DIR="logs/$MODEL_NAME"
-mkdir -p $OUTPUT_DIR
+mkdir -p "tokenizers/"
+mkdir -p $MODEL_OUTPUT_DIR
 mkdir -p $LOG_DIR
 
 
-python train.py --ENC_DEC_MODELPATH dccuchile/bert-base-spanish-wwm-uncased \
---DATADIR_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es \
---DATADIR_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca \
+python train.py \
+--DATADIR_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/ \
+--DATADIR_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca_splits/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines

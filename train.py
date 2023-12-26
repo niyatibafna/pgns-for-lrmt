@@ -8,14 +8,14 @@ from torch import nn
 from torch.nn import Embedding, CrossEntropyLoss
 # from numpy import ndarray
 
-from transformers import AutoTokenizer, EncoderDecoderModel, PretrainedConfig, \
+from transformers import AutoTokenizer, EncoderDecoderModel, EncoderDecoderConfig, PretrainedConfig, \
     PreTrainedModel, BertTokenizer, BertConfig, BertForMaskedLM, DataCollatorForSeq2Seq, Seq2SeqTrainer, Seq2SeqTrainingArguments
 from transformers.modeling_outputs import Seq2SeqLMOutput, BaseModelOutput
 from transformers.models.bert.modeling_bert import BertEmbeddings, BertModel, \
     BertEncoder, BertPooler, BertForSequenceClassification,BertPreTrainedModel, \
     BaseModelOutputWithPoolingAndCrossAttentions
 from transformers.models.encoder_decoder.modeling_encoder_decoder import shift_tokens_right, DEPRECATION_WARNING
-from transformers.generation_utils import LogitsProcessorList, StoppingCriteriaList
+# from transformers.generation_utils import LogitsProcessorList, StoppingCriteriaList
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -27,7 +27,7 @@ import argparse
 import os, sys
 sys.path.append("../")
 # from utils.variables import LANGS
-from utils import get_tokenizers
+from utils import get_tokenizer
 import logging
 # LANGS = sorted(LANGS)
 # print(LANGS)
@@ -176,14 +176,14 @@ def init_tokenizer(TOKENIZER_INPATH, FILES):
     we should simply pass the HF key of the model as TOKENIZER_INPATH'''
 
     logging.info("Loading src tokenizer from {}".format(TOKENIZER_INPATH))
-    tokenizer = get_tokenizers.train_or_load_tokenizer(TOKENIZER_INPATH,  \
+    tokenizer = get_tokenizer.train_or_load_tokenizer(TOKENIZER_INPATH,  \
         FILES = FILES)
     # Looks like HF MT doesn't support separate source and target tokenizers
     # logging.info("Loading tgt tokenizer from {}".format(TGT_TOKENIZER_INPATH))
-    # tgt_tokenizer = get_tokenizers.train_or_load_tokenizer(TGT_TOKENIZER_INPATH, tokenizer)
+    # tgt_tokenizer = get_tokenizer.train_or_load_tokenizer(TGT_TOKENIZER_INPATH, tokenizer)
 
     ### Optionally add language ID tokens
-    # tokenizer = get_tokenizers.add_langid_tokens(tokenizer, LANGS)
+    # tokenizer = get_tokenizer.add_langid_tokens(tokenizer, LANGS)
 
     
     return tokenizer
@@ -203,10 +203,10 @@ def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
     else:
         # If not, we initialize the encoder and decoder from scratch
         logging.info("Initializing encoder-decoder model from scratch")
-        encoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers= 6) # Add in config - num_hidden_layers, etc.
-        decoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6) # Add in config - num_hidden_layers, etc.
-        model_enc_dec = EncoderDecoderModelNew.from_encoder_decoder_configs(encoder_config, decoder_config)
-
+        encoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
+        decoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
+        config = EncoderDecoderConfig.from_encoder_decoder_configs(encoder_config, decoder_config)
+        model_enc_dec = EncoderDecoderModelNew.from_encoder_decoder_pretrained(config)
 
     ## Set model parameters
     # model_enc_dec.model_lid = model_lid
@@ -312,10 +312,10 @@ def main(args):
     global tb_writer, increment_for_tb, script
     tb_writer = SummaryWriter(args.LOG_DIR)
     increment_for_tb = 0 # every step, we increment this by 1, and use it to write to tensorboard
-    if "spanish" in args.ENC_DEC_MODELPATH:
-        script = "lat"
-    elif "hindi" in args.ENC_DEC_MODELPATH:
-        script = "dev"
+    # if "spanish" in args.ENC_DEC_MODELPATH:
+    #     script = "lat"
+    # elif "hindi" in args.ENC_DEC_MODELPATH:
+    #     script = "dev"
 
     # Get seq2seq model and tokenizer
     logging.info("Initializing tokenizer...")

@@ -13,6 +13,8 @@ sys.path.append("../")
 def train_or_load_tokenizer(TOKENIZER_OUTPATH, \
     FILES = None, 
     vocab_size = 16_000):
+    print(os.path.exists(TOKENIZER_OUTPATH))
+    
 
     if not os.path.exists(TOKENIZER_OUTPATH) and FILES is not None:
         print("Training tokenizer...")
