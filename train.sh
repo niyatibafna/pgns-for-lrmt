@@ -21,7 +21,7 @@ cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
 epochs=10
 batch_size=16
-max_lines_all=(15000 30000 60000)
+max_lines_all=(150 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
