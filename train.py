@@ -1,7 +1,7 @@
 debug = True
 SEED = 42
 
-#%%
+
 from typing import Optional, Tuple, Union, List
 import torch
 from torch import nn
@@ -21,10 +21,16 @@ from torch.utils.tensorboard import SummaryWriter
 
 from datasets import Dataset, load_dataset
 from math import inf as INF
+import numpy as np
+
+import evaluate
 
 
 import argparse
 import os, sys
+
+from transformers.trainer_callback import TrainerControl, TrainerState
+from transformers.training_args import TrainingArguments
 sys.path.append("../")
 # from utils.variables import LANGS
 from utils import get_tokenizer
@@ -33,10 +39,7 @@ import logging
 # print(LANGS)
 
 from transformers.deepspeed import is_deepspeed_zero3_enabled
-
-
-
-#%%
+from transformers.integrations import TensorBoardCallback, is_tensorboard_available
 
 class EncoderDecoderModelNew(EncoderDecoderModel):
 
@@ -48,6 +51,8 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         decoder: Optional[PreTrainedModel] = None,
         # model_lid: Optional[BertForSequenceClassificationSmoothEmbeddings] = None,
     ):
+        self.log = {}
+        self.increment = 1
         super().__init__(config, encoder, decoder)
 
     
@@ -99,6 +104,9 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         >>> # generation
         >>> generated = model.generate(input_ids)
         ```"""
+        global increment
+        self.log["something_to_visualize"] = self.increment
+        self.increment += 1
         return super().forward(input_ids, attention_mask, decoder_input_ids, \
                                decoder_attention_mask, encoder_outputs, past_key_values, \
                                 inputs_embeds, decoder_inputs_embeds, labels, use_cache, \
@@ -119,7 +127,7 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         inputs: Optional[torch.Tensor] = None,
         **kwargs,
     ):
-        print("In derived class for generate!")
+        # print("In derived class for generate!")
         return super().generate(inputs, **kwargs)
 
 class Seq2SeqTrainerTali(Seq2SeqTrainer):
@@ -169,7 +177,6 @@ class Seq2SeqTrainerTali(Seq2SeqTrainer):
         # return loss
         # # Save past state if it exists
 
-# %%
 
 def init_tokenizer(TOKENIZER_INPATH, FILES):
     '''Note that if we are using a pretrained tokenizer,
@@ -227,8 +234,6 @@ def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
     model_enc_dec.config.pad_token_id = tokenizer.pad_token_id
 
     return model_enc_dec
-
-
 
 def get_dataset_split(DATAFILE_L1, DATAFILE_L2, max_lines, tokenizer, max_length = 512):
 
@@ -304,12 +309,47 @@ def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 51
     
     return train_dataset, dev_dataset, test_dataset
 
+def compute_metrics(pred):
+    '''Compute BLEU score'''
+    global tokenizer, bleu
+
+    # Get predictions
+    predictions = pred.predictions
+    labels = pred.label_ids
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+
+    # Decode
+    predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+    # Compute BLEU
+    bleu_metric = bleu.compute(predictions = predictions, references = labels)
+
+    # Remove precisions
+    bleu_metric = {k: v for k, v in bleu_metric.items() if k != "precisions"}
+
+    return bleu_metric
+
+class CustomTensorboardCallback(TensorBoardCallback):
+    
+    def on_log(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        '''We visualize things here'''
+        model = kwargs.pop("model")
+        something_to_visualize = model.log["something_to_visualize"]
+
+        # Log to tensorboard
+        self._writer.add_scalar("something_to_visualize", something_to_visualize, state.global_step)
+
+
 def main(args):
 # TRAIN_FILES, DEV_FILES, 
 # LID_MODELPATH, NUM_LID_LABELS, ENC_DEC_MODELPATH, alpha = 0.5, max_length = 512
 # OUTPUT_DIR, LOG_DIR, epochs, batch_size
 
     global tb_writer, increment_for_tb, script
+    global tokenizer
+    global bleu
+
     tb_writer = SummaryWriter(args.LOG_DIR)
     increment_for_tb = 0 # every step, we increment this by 1, and use it to write to tensorboard
     # if "spanish" in args.ENC_DEC_MODELPATH:
@@ -345,6 +385,9 @@ def main(args):
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model_enc_dec)
     
+    # Metric
+    bleu = evaluate.load("bleu")
+
     # Initialize Seq2SeqTrainer
     logging.info("Initializing trainer...")
 
@@ -364,11 +407,11 @@ def main(args):
     logging_dir=args.LOG_DIR,
     predict_with_generate=True,
     report_to="tensorboard",
-    logging_steps=100,
+    logging_steps=10,
     save_strategy="steps",
     save_steps=2000, # For 15000 examples, this will save roughly every epoch with batch size 8
     evaluation_strategy="steps",
-    eval_steps=100,
+    eval_steps=1,
     load_best_model_at_end=True,
     save_total_limit=2
     )
@@ -378,7 +421,7 @@ def main(args):
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=dev_dataset,
-        # compute_metrics=compute_metrics,
+        compute_metrics=compute_metrics,
         tokenizer=tokenizer,
         data_collator= data_collator,
     )   
@@ -441,8 +484,6 @@ def main(args):
     #             decoder_input_ids = decoder_input_ids)
 
     #         # visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, model_outputs.cross_attentions, model_outputs.p_gen)
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
