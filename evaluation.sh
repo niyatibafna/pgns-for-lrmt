@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-#$ -N expname
+#$ -N basic
 #$ -wd /export/b08/nbafna1/projects/mt_hw_skeleton/
 #$ -m e
-#$ -t 1-3
+#$ -t 1
 #$ -j y -o qsub_logs/expname_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
@@ -19,7 +19,9 @@ source /home/gqin2/scripts/acquire-gpu 1
 conda activate pgenv
 cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
-EXP_ID="expname"
+EXP_ID="basic"
+epochs=10
+max_lines=15000
 MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
 TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
 

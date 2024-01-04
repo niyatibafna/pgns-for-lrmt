@@ -206,7 +206,7 @@ def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
         encoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
         decoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
         config = EncoderDecoderConfig.from_encoder_decoder_configs(encoder_config, decoder_config)
-        model_enc_dec = EncoderDecoderModelNew.from_encoder_decoder_pretrained(config)
+        model_enc_dec = EncoderDecoderModelNew(config)
 
     ## Set model parameters
     # model_enc_dec.model_lid = model_lid
