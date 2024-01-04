@@ -4,7 +4,7 @@
 #$ -wd /export/b08/nbafna1/projects/mt_hw_skeleton/
 #$ -m e
 #$ -t 1
-#$ -j y -o qsub_logs/expname_$TASK_ID.out
+#$ -j y -o qsub_logs/basic_eval_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,

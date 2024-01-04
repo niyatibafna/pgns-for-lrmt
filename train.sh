@@ -19,9 +19,9 @@ source /home/gqin2/scripts/acquire-gpu 1
 conda activate pgenv
 cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
-epochs=10
+epochs=20
 batch_size=16
-max_lines_all=(150 30000 60000)
+max_lines_all=(150000 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 

@@ -52,7 +52,7 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         # model_lid: Optional[BertForSequenceClassificationSmoothEmbeddings] = None,
     ):
         self.log = {}
-        self.increment = 1
+        self.increment = 0
         super().__init__(config, encoder, decoder)
 
     
@@ -72,7 +72,6 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         inputs_embeds: Optional[torch.FloatTensor] = None,
         decoder_inputs_embeds: Optional[torch.FloatTensor] = None,
         labels: Optional[torch.LongTensor] = None,
-        labels_lid: Optional[torch.LongTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -104,9 +103,9 @@ class EncoderDecoderModelNew(EncoderDecoderModel):
         >>> # generation
         >>> generated = model.generate(input_ids)
         ```"""
-        global increment
-        self.log["something_to_visualize"] = self.increment
-        self.increment += 1
+        if self.training:
+            self.log["something_to_visualize"] = self.increment
+            self.increment += 1
         return super().forward(input_ids, attention_mask, decoder_input_ids, \
                                decoder_attention_mask, encoder_outputs, past_key_values, \
                                 inputs_embeds, decoder_inputs_embeds, labels, use_cache, \
@@ -337,8 +336,10 @@ class CustomTensorboardCallback(TensorBoardCallback):
         model = kwargs.pop("model")
         something_to_visualize = model.log["something_to_visualize"]
 
+        print(f"In custom callback, something to visualize: {something_to_visualize}")
+
         # Log to tensorboard
-        self._writer.add_scalar("something_to_visualize", something_to_visualize, state.global_step)
+        self.tb_writer.add_scalar("something_to_visualize", something_to_visualize, state.global_step)
 
 
 def main(args):
@@ -346,12 +347,10 @@ def main(args):
 # LID_MODELPATH, NUM_LID_LABELS, ENC_DEC_MODELPATH, alpha = 0.5, max_length = 512
 # OUTPUT_DIR, LOG_DIR, epochs, batch_size
 
-    global tb_writer, increment_for_tb, script
+    global tb_writer
     global tokenizer
     global bleu
 
-    tb_writer = SummaryWriter(args.LOG_DIR)
-    increment_for_tb = 0 # every step, we increment this by 1, and use it to write to tensorboard
     # if "spanish" in args.ENC_DEC_MODELPATH:
     #     script = "lat"
     # elif "hindi" in args.ENC_DEC_MODELPATH:
@@ -421,9 +420,10 @@ def main(args):
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=dev_dataset,
-        compute_metrics=compute_metrics,
         tokenizer=tokenizer,
         data_collator= data_collator,
+        compute_metrics=compute_metrics,
+        callbacks=[CustomTensorboardCallback],
     )   
 
     
@@ -460,30 +460,8 @@ def main(args):
 
     #     # logging.info("DONE EVALUATION")
 
-    #     # Log visualizations of p_copy and cross-attention matrices to logfile
-    #     logging.info("Logging visualizations...")
-    #     # Take some sample from the test dataset
-    #     sample_size = min(50, len(test_dataset))
-    #     sample = test_dataset.select(range(sample_size))
-    #     # Set log_visualizations to True
-    #     model_enc_dec.log_visualizations = True
-    #     # Pass each sample one by one
-    #     for i in range(sample_size):
-    #         # Get predictions
-    #         ## We are interested in passing this sample through the forward() function, 
-    #         ## which will log the visualizations for us
-
-    #         # Prepare inputs
-    #         input_ids = sample[i]["input_ids"].unsqueeze(0)
-    #         attention_mask = sample[i]["attention_mask"].unsqueeze(0)
-    #         decoder_input_ids = sample[i]["labels"].unsqueeze(0)
-
-    #         # decoder_attention_mask = sample[i]["decoder_attention_mask"].unsqueeze(0)
-    #         # Get predictions
-    #         model_outputs = model_enc_dec(input_ids = input_ids, attention_mask = attention_mask, \
-    #             decoder_input_ids = decoder_input_ids)
-
-    #         # visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, model_outputs.cross_attentions, model_outputs.p_gen)
+    
+    # visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, model_outputs.cross_attentions, model_outputs.p_gen)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
