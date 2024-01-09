@@ -16,12 +16,13 @@
 
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
 source /home/gqin2/scripts/acquire-gpu 1
-conda activate pgenv
+
+conda activate basic
 cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
 epochs=20
-batch_size=16
-max_lines_all=(150000 30000 60000)
+batch_size=32
+max_lines_all=(50000 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
