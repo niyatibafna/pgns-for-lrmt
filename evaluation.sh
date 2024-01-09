@@ -16,7 +16,7 @@
 
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
 source /home/gqin2/scripts/acquire-gpu 1
-conda activate pgenv
+conda activate basic
 cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
 EXP_ID="basic"
