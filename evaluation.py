@@ -52,7 +52,7 @@ def evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath,\
         tokenizer = AutoTokenizer.from_pretrained(TOK_PATH)
 
 
-    pipe = pipeline("token-classification", model = model_inpath, tokenizer = tokenizer)#, device=0)
+    pipe = pipeline("token-classification", model = model_inpath, tokenizer = tokenizer, device=0)
 
     all_labels = sorted(list({label for sent in train_labels+dev_labels+test_labels for label in sent.split()}))
     label2idx = {label:idx for idx, label in enumerate(all_labels)}
@@ -111,7 +111,7 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     
     # tokenizer = get_tokenizers.add_dialectid_tokens(tokenizer)
 
-    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True)#, device=0)
+    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True, device=-1)
 
     # Save MT outputs
     # scores = {"bho":{}, "mag":{}}
