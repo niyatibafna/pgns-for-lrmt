@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 #$ -N basic
-#$ -wd /export/b08/nbafna1/projects/mt_hw_skeleton/
+#$ -wd /export/b08/nbafna1/projects/mt_hf_skeleton/
 #$ -m e
 #$ -t 1
-#$ -j y -o qsub_logs/basic_eval_$TASK_ID.out
+#$ -j y -o qsub_logs/basic_eval_2.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -20,19 +20,22 @@ conda activate basic
 cd /export/b08/nbafna1/projects/mt_hf_skeleton/
 
 EXP_ID="basic"
-epochs=10
-max_lines=15000
+epochs=20
+max_lines=50000
 MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
 TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
+OUTPUT_DIR="output_translations/$MODEL_NAME"
+mkdir -p $OUTPUT_DIR
 
 python evaluation.py \
---DATAFILE_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es/test \
---DATAFILE_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca/test \
+--DATAFILE_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/test \
+--DATAFILE_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/test \
 --MODEL_INPATH $MODEL_OUTPUT_DIR \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
+--output_dir $OUTPUT_DIR \
 --EXP_ID $EXP_ID 
 
 

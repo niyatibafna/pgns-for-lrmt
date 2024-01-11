@@ -2,3 +2,4 @@ logs/*
 tokenizers/*
 qsub_logs/*
 models/*
+output_translations/*
