@@ -8,6 +8,7 @@ from tokenizers.models import WordPiece
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
+from tokenizers import decoders
 
 from transformers import AutoTokenizer
 from transformers import DataCollatorForTokenClassification
@@ -27,11 +28,13 @@ import json
 import os, sys
 sys.path.append("../")
 sys.path.append("../finetuning/")
-from utils import eval_datareader, get_tokenizers
+# from utils import eval_datareader, get_tokenizers
+from utils import get_tokenizer
 import argparse
 
 # from scripts import finetuning_hfbert
 # PTLM_NAME = "bert-base-multilingual-cased"
+
 
 
 def evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath,\
@@ -45,7 +48,7 @@ def evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath,\
     if not HF_MODEL_NAME and not EP_MODEL_NAME:
         assert os.path.isfile(tokenizer_inpath)
         print("Loading from path! ")
-        tokenizer = get_tokenizers.train_or_load_tokenizer(tokenizer_inpath)
+        tokenizer = get_tokenizer.train_or_load_tokenizer(tokenizer_inpath)
     else:
         print("Loading from HF! ")
         TOK_PATH = HF_MODEL_NAME if HF_MODEL_NAME else EP_MODEL_NAME
@@ -104,14 +107,18 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     #seq2seq Pipeline with model_inpath and tokenizer
     if os.path.isfile(tokenizer_inpath):
         print("Loading from path! ")
-        tokenizer = get_tokenizers.train_or_load_tokenizer(tokenizer_inpath)
+        tokenizer = get_tokenizer.train_or_load_tokenizer(tokenizer_inpath)
+        # Set the max length of the tokenizer
+        tokenizer.model_max_length = 512
     else:
         print("Loading from HF! ")
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_inpath, model_max_length = 512)
     
+    tokenizer.decoder = decoders.WordPiece()
     # tokenizer = get_tokenizers.add_dialectid_tokens(tokenizer)
-
-    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True, device=-1)
+    device = torch.cuda.current_device() if torch.cuda.is_available() else -1
+    print(f"Device: {device}")
+    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True, device=device)
 
     # Save MT outputs
     # scores = {"bho":{}, "mag":{}}
@@ -125,11 +132,24 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
 
     # Create a new dataset that has source and target as columns
     dataset = Dataset.from_dict({"source": dataset["source"]["text"], "target": dataset["target"]["text"]})
-
+    # Take only 1000 examples
+    dataset = dataset.select(range(500))
+    
+    true_sents = dataset["target"]
     pred_sents = list()
-    for output in tqdm(pipe(KeyDataset(dataset, "source"), max_length = 512, truncation = True)):        
-        pred_sents.append(output["translation_text"])
+    for output in tqdm(pipe(KeyDataset(dataset, "source"), batch_size = 32, max_length = 512, truncation = True)):        
+        for sent in output:
+            token_ids = tokenizer.convert_tokens_to_ids(sent["translation_text"].split())
+            pred = tokenizer.decode(token_ids, skip_special_tokens = True)
+            print(f"Pred: {pred}")
+            pred_sents.append(pred)
 
+    print(f"True sentences: {len(true_sents)}")
+    print(f"Predicted sentences: {len(pred_sents)}")
+    print(f"Sample true sentence: {true_sents[:3]}")
+    print(f"Sample predicted sentence: {pred_sents[:3]}")
+    # Get references
+    
     
     output_path = os.path.join(output_dir, "preds.txt") #if not charbleu else os.path.join(output_dir, lang+"_preds_charbleu.txt")
     with open(output_path, "w") as f:
@@ -157,7 +177,7 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     #     save_results_to_file(EXP_ID, DATAFILE_L1, scores, RECORD_FILE= RECORD_FILE)
 
 
-def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, transformed_datapath, save_results = True, charbleu = False, SEED = 42):
+def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, translations_file, save_results = True, charbleu = False, SEED = 42):
     '''Runs evaluation for MT if predictions (and true sents) are already saved in some file
     Also saves the results automatically in experiment records
     eval_datapath: eval DIR to the MT parallel data'''
@@ -173,7 +193,7 @@ def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, transformed_datapath, save
     
     with open(eval_datapath, "r") as f:
         true_sents = f.read().split("\n")
-    with open(transformed_datapath, "r") as f:
+    with open(translations_file, "r") as f:
         pred_sents = f.read().split("\n")
     
     true_sents = [[true_sent] for true_sent in true_sents]
@@ -256,9 +276,11 @@ if __name__=="__main__":
     parser.add_argument("--EXP_ID", type=str, required=True, help="Experiment ID")
     parser.add_argument("--save_results", action="store_true", help="Save results to file")
     parser.add_argument("--task", type=str, default="translation", help="Task to evaluate")
-    # Accept transformed_datapath, from_file,
-    parser.add_argument("--output_dir", type=str, default=None, help="Path to the transformed data")
+    parser.add_argument("--output_dir", type=str, default=None, help="Output directory to save the results")
+    # Accept translated data from_file,
     parser.add_argument("--from_file", action="store_true", help="Evaluate from file")
+    parser.add_argument("--translations_file", type=str, default=None, help="Path to the transformed data")
+    
 
 
     
@@ -269,7 +291,7 @@ if __name__=="__main__":
     MODEL_INPATH = None
 
     if task == "translation":
-        if MODEL_INPATH:
+        if not args.from_file:
             print("Evaluating pipeline")
             evaluate_mt_bleu(args.DATAFILE_L1, args.DATAFILE_L2, args.TOKENIZER_INPATH, args.MODEL_INPATH, SEED = 42,  \
                     charbleu = False, \
@@ -289,8 +311,8 @@ if __name__=="__main__":
                     # transformed_datapath =  "../data/raw_parallel/loresmt/hi2{0}.test.hi".format(lang)
             print("Evaluating from file")
             # evaluate_mt_bleu_from_file(args.EXP_ID, args.DATAPATH, args.transformed_datapath, save_results = args.save_results, charbleu = True)
-            evaluate_mt_bleu_from_file(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, SEED = 42,  \
+            evaluate_mt_bleu_from_file(args.DATAFILE_L1, args.DATAFILE_L2, args.TOKENIZER_INPATH, args.MODEL_INPATH, SEED = 42,  \
                     charbleu = False, \
-                    save_results = True, output_dir = None, \
-                    EXP_ID = None)
+                    save_results = args.save_results, translations_file = args.translations_file, \
+                        EXP_ID = args.EXP_ID)
     # see_results()
