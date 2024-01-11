@@ -347,7 +347,6 @@ def main(args):
 # LID_MODELPATH, NUM_LID_LABELS, ENC_DEC_MODELPATH, alpha = 0.5, max_length = 512
 # OUTPUT_DIR, LOG_DIR, epochs, batch_size
 
-    global tb_writer
     global tokenizer
     global bleu
 
@@ -406,11 +405,11 @@ def main(args):
     logging_dir=args.LOG_DIR,
     predict_with_generate=True,
     report_to="tensorboard",
-    logging_steps=10,
+    logging_steps=100,
     save_strategy="steps",
     save_steps=2000, # For 15000 examples, this will save roughly every epoch with batch size 8
     evaluation_strategy="steps",
-    eval_steps=1,
+    eval_steps=100, 
     load_best_model_at_end=True,
     save_total_limit=2
     )
@@ -428,6 +427,7 @@ def main(args):
 
     
     logging.info("STARTING TRAINING")
+    logging.info(f"CUDA: {torch.cuda.is_available()}")
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     logging.info("SAVING MODEL")
