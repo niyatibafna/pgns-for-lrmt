@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#$ -N basic
-#$ -wd /export/b08/nbafna1/projects/mt_hf_skeleton/
+#$ -N pgn
+#$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1
-#$ -j y -o qsub_logs/basic_$TASK_ID.out
+#$ -t 3
+#$ -j y -o qsub_logs/pgn_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -18,17 +18,18 @@
 source /home/gqin2/scripts/acquire-gpu 1
 
 conda activate basic
-cd /export/b08/nbafna1/projects/mt_hf_skeleton/
+cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
-epochs=20
+
+epochs=(40 30 20)
 batch_size=32
-max_lines_all=(50000 30000 60000)
+max_lines_all=(15000 30000 60000)
 
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
-EXP_ID="basic"
-MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
-TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
+EXP_ID="pgn"
+MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines"
+TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
