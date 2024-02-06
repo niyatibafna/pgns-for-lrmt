@@ -3,7 +3,7 @@
 #$ -N pgn
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 3
+#$ -t 1-3
 #$ -j y -o qsub_logs/pgn_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
@@ -17,14 +17,14 @@
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
 source /home/gqin2/scripts/acquire-gpu 1
 
-conda activate basic
+conda activate pgnenv
 cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
 
-epochs=(40 30 20)
+epochs_all=(40 30 20)
+epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=32
 max_lines_all=(15000 30000 60000)
-
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
 EXP_ID="pgn"
@@ -39,9 +39,9 @@ mkdir -p $MODEL_OUTPUT_DIR
 mkdir -p $LOG_DIR
 
 
-python train.py \
---DATADIR_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/ \
---DATADIR_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.ca_splits/ \
+python pgn_scratch.py \
+--DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.es_splits \
+--DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.ca_splits \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines
