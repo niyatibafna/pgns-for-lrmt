@@ -1,6 +1,6 @@
 debug = False
 debug_pgen = False
-debug_vis = True
+debug_vis = False
 SEED = 42
 
 import warnings 
@@ -264,9 +264,8 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
         if encoder_input_ids is not None and input_ids is None:
             input_ids = encoder_input_ids
 
-
-        copy_logits = torch.zeros(required_shape, dtype=attentions.dtype).scatter(dim = -1, index = input_ids.unsqueeze(1).repeat(1, attentions.shape[1], 1), \
-            src = attentions)
+        copy_logits = torch.zeros(required_shape, dtype=attentions.dtype).to(self.device).scatter(dim = -1, index = input_ids.unsqueeze(1).repeat(1, attentions.shape[1], 1).to(self.device), \
+            src = attentions.to(self.device))
 
         if debug:
             # Print encoder outputs
@@ -363,7 +362,7 @@ def init_tokenizer(TOKENIZER_INPATH, FILES):
     
     return tokenizer
 
-def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
+def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None, force_p_gen = None):
     '''Get seq2seq model'''
 
     # Initialize Seq2Seq model, input and output tokenizer, special hyperparameters
@@ -388,6 +387,9 @@ def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None):
     # model_enc_dec.alpha = alpha
     # model_enc_dec.tau = tau
     # model_enc_dec.istauhard = istauhard
+        
+    model_enc_dec.force_p_gen = force_p_gen
+
     if model_enc_dec.encoder.config.vocab_size !=len(tokenizer):
         model_enc_dec.encoder.resize_token_embeddings(len(tokenizer))
     if model_enc_dec.decoder.config.vocab_size != len(tokenizer):
@@ -491,6 +493,11 @@ def compute_metrics(pred):
     labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     # Compute BLEU
+    ## If length of predictions is 0, we return 0
+    if sum([len(pred.split()) for pred in predictions]) == 0:
+        return {'bleu': 0.0, \
+                'brevity_penalty': 0, \
+                'length_ratio': 0, 'translation_length': 0, 'reference_length': 0}
     bleu_metric = bleu.compute(predictions = predictions, references = labels)
 
     # Remove precisions
@@ -700,6 +707,7 @@ def main(args):
     
     logging.info("STARTING TRAINING")
     logging.info(f"CUDA: {torch.cuda.is_available()}")
+    print(f"Model device: {model_enc_dec.device}")
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     logging.info("SAVING MODEL")
@@ -735,8 +743,7 @@ def main(args):
         # Take some sample from the test dataset
         sample_size = min(50, len(test_dataset))
         sample = test_dataset.select(range(sample_size))
-        # Set log_visualizations to True
-        model_enc_dec.log_visualizations = True
+
         # Pass each sample one by one
         for i in range(sample_size):
             # Get predictions
@@ -773,6 +780,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default = 16)
     parser.add_argument("--max_lines", type=int, default = INF)
     parser.add_argument("--resume_from_checkpoint", action="store_true", default=False, help="Resume training from args.OUTPUT_DIR")
+    parser.add_argument("--force_p_gen", type=float, default = None)
     # Take any additional approach-related parameters
 
     args = parser.parse_args()
