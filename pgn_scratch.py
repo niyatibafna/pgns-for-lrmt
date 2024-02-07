@@ -308,20 +308,14 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
             encoder_attentions=encoder_outputs.attentions,
             p_gen = p_gen,
         )
-        # Once in a while, log visualizations.
-        ## Do this every 100 batches
-        if self.training and self.increment % 100 == 0:
-            self.log["params"] = (input_ids, decoder_input_ids, \
-                                torch.clone(model_outputs.cross_attentions[-1].unsqueeze(0)), torch.clone(model_outputs.p_gen))
+        
+        if self.training: 
+            # Once in a while, log visualizations.
+            ## Do this every 100 batches
+            if self.increment % 100 == 0:
+                self.log["params"] = (input_ids, decoder_input_ids, \
+                                    torch.clone(model_outputs.cross_attentions[-1].unsqueeze(0)), torch.clone(model_outputs.p_gen))
             self.increment += 1
-        # if increment_for_tb % 100 == 0 and self.training:
-        #     # Pass a clone of the input_ids, decoder_input_ids, cross_attentions, and p_gen to the visualization function
-        #     visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, \
-        #                                                torch.clone(model_outputs.cross_attentions[-1].unsqueeze(0)), torch.clone(model_outputs.p_gen))
-            
-            # increment_for_tb is incremented in the visualization function
-
-        # increment_for_tb += 1
 
         if not return_dict:
             if loss is not None:
@@ -568,13 +562,13 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
         # All labels in Devanagari font  
         matplotlib.rcParams['font.family'] = 'Noto Serif Devanagari'
         # Reduce font size
-    matplotlib.rcParams.update({'font.size': 18})
+    matplotlib.rcParams.update({'font.size': 22})
     # Prepare figure
     fig, ax = plt.subplots(2, 1, figsize=(40, 20))
     # Set up heatmap as first subplot
     sns.heatmap(cross_attention_weights, ax = ax[0], cbar=False)
     # Set up labels
-    ax[0].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=90)
+    ax[0].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=60)
     ax[0].set_yticks(ticks=range(len(input_tokens)), labels=input_tokens, rotation=0)
 
     # Plot p_gen as a bar graph
@@ -585,7 +579,7 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
         logging.info(f"p_gen: {p_gen}")
     ax[1].bar(range(len(output_tokens)), p_gen)
     # Label x axis as output tokens
-    ax[1].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=90)
+    ax[1].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=60)
 
     # Label y axis as "p_gen"
     ax[1].set_ylabel("p_gen")
@@ -620,17 +614,12 @@ def main(args):
     global bleu
 
     global script
-    if args.ENC_DEC_MODELPATH and "spanish" in args.ENC_DEC_MODELPATH:
+    if (args.ENC_DEC_MODELPATH and "spanish" in args.ENC_DEC_MODELPATH) or ("es" in args.DATADIR_L1):
         script = "lat"
-    elif args.ENC_DEC_MODELPATH and "hindi" in args.ENC_DEC_MODELPATH:
+    elif (args.ENC_DEC_MODELPATH and "hindi" in args.ENC_DEC_MODELPATH) or ("hi" in args.DATADIR_L1):
         script = "dev"
     else:
         script = "lat"
-
-    # if "spanish" in args.ENC_DEC_MODELPATH:
-    #     script = "lat"
-    # elif "hindi" in args.ENC_DEC_MODELPATH:
-    #     script = "dev"
 
     # Get seq2seq model and tokenizer
     logging.info("Initializing tokenizer...")
@@ -720,6 +709,8 @@ def main(args):
         test_metrics = test_results.metrics
         predictions = test_results.predictions
         labels = test_results.label_ids
+        # Replace -100 with pad token since we can't decode those
+        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
 
         # Decode into text
         inputs = tokenizer.batch_decode(test_dataset["input_ids"], skip_special_tokens=True)
