@@ -9,7 +9,7 @@
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=20G,mem_free=30G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
+#$ -l ram_free=15G,mem_free=15G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
 
 # Submit to GPU queue
 #$ -q g.q
@@ -22,7 +22,7 @@ cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
 epochs_all=(40 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
-batch_size=32
+batch_size=16
 max_lines_all=(15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 pgen=1

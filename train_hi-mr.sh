@@ -23,7 +23,7 @@ cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
 epochs_all=(40 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
-batch_size=32
+batch_size=12
 max_lines_all=(15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
