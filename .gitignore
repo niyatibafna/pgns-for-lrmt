@@ -3,3 +3,4 @@ tokenizers/*
 qsub_logs/*
 models/*
 output_translations/*
+test_bleu.py
