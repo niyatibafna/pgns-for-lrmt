@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#$ -N basic
-#$ -wd /export/b08/nbafna1/projects/mt_hf_skeleton/
+#$ -N pgneval
+#$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1
-#$ -j y -o qsub_logs/basic_eval_2.out
+#$ -t 1-3
+#$ -j y -o qsub_logs/pgneval_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -16,14 +16,19 @@
 
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
 source /home/gqin2/scripts/acquire-gpu 1
-conda activate basic
-cd /export/b08/nbafna1/projects/mt_hf_skeleton/
+conda activate pgnenv
+cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
-EXP_ID="basic"
-epochs=20
-max_lines=50000
-MODEL_NAME="$EXP_ID~l1-l2-epochs~$epochs-max_lines~$max_lines"
-TOKENIZER_NAME="$EXP_ID~l1-l2~max_lines-$max_lines"
+
+epochs_all=(40 30 20)
+epochs=${epochs_all[$SGE_TASK_ID-1]}
+batch_size=32
+max_lines_all=(15000 30000 60000)
+max_lines=${max_lines_all[$SGE_TASK_ID-1]}
+
+EXP_ID="pgn"
+MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines"
+TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
@@ -31,8 +36,8 @@ OUTPUT_DIR="output_translations/$MODEL_NAME"
 mkdir -p $OUTPUT_DIR
 
 python evaluation.py \
---DATAFILE_L1 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/test \
---DATAFILE_L2 /export/b08/nbafna1/projects/pointer-networks-for-same-family-nmt/data/europarl.es-ca.es_splits/test \
+--DATAFILE_L1 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.es_splits/test \
+--DATAFILE_L2 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.ca_splits/test \
 --MODEL_INPATH $MODEL_OUTPUT_DIR \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --output_dir $OUTPUT_DIR \
