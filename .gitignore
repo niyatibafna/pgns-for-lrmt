@@ -4,3 +4,4 @@ qsub_logs/*
 models/*
 output_translations/*
 test_bleu.py
+utils/__pycache__/*
