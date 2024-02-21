@@ -7,6 +7,7 @@ import warnings
 from typing import Optional, Tuple, Union, List
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.nn import Embedding, NLLLoss, CrossEntropyLoss
 # from numpy import ndarray
 
@@ -53,6 +54,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 
+from memory_profiler import profile
+
 SEED = 42
 
 #%%
@@ -84,7 +87,7 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
         for param in self.model_lid.parameters():
             print(param.requires_grad)
 
-
+    ##@profile
     def forward(
     self,
     input_ids: Optional[torch.LongTensor] = None,
@@ -278,27 +281,32 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
             print(f"generate_prob shape: {p_gen.shape}")
             print(f"copy_logits shape: {copy_logits.shape}")
     
-
         ## Now, we mix the generate and copy probabilities
         generate_logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-        ## Normalizing the logits
-        generate_probs = torch.softmax(generate_logits, dim = -1)
-        copy_probs = torch.softmax(copy_logits, dim = -1)
-        ## Mixing probabilities
-        mixed_probs = generate_probs * p_gen + copy_probs * (1 - p_gen)
-        ## Pass log probabilities to NLLLoss
-        log_mixed_probs = torch.log(mixed_probs)    
+        # Normalizing and mixing probabilities
+        mixed_probs = F.softmax(generate_logits, dim=-1) * p_gen + F.softmax(copy_logits, dim=-1) * (1 - p_gen)
+
+        ### TODO Change this - sanity check to see what happens if we switch the generate and copy logits
+        ### Over here: p_gen is conceptually p_copy
+        # mixed_probs = F.softmax(generate_logits, dim=-1) * (1 - p_gen) + F.softmax(copy_logits, dim=-1) * p_gen 
+
+        ## This is equivalent to doing:
+        ## generate_probs = torch.softmax(generate_logits, dim = -1)
+        ## copy_probs = torch.softmax(copy_logits, dim = -1)
+        ## mixed_probs = generate_probs * p_gen + copy_probs * (1 - p_gen)
+
         # Compute loss independent from decoder (as some shift the logits inside them)
+        # Pass log probabilities to NLLLoss
         loss = None
         if labels is not None:
             warnings.warn(DEPRECATION_WARNING, FutureWarning)
             loss_fct = NLLLoss()
-            loss = loss_fct(log_mixed_probs.reshape(-1, self.decoder.config.vocab_size), labels.view(-1))
+            loss = loss_fct(torch.log(mixed_probs).reshape(-1, self.decoder.config.vocab_size), labels.view(-1))
 
 
         model_outputs = Seq2SeqLMOutputWithPGen(
             loss=loss,
-            logits=log_mixed_probs, # We pass log probabilities since these will become probabilities after softmax
+            logits=torch.log(mixed_probs), # We pass log probabilities since these will become probabilities after softmax
             past_key_values=decoder_outputs.past_key_values,
             decoder_hidden_states=decoder_outputs.hidden_states,
             decoder_attentions=decoder_outputs.attentions,
@@ -325,7 +333,7 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
 
         return model_outputs
 
-        
+    ##@profile    
     def generate(
         self,
         inputs: Optional[torch.Tensor] = None,
@@ -499,7 +507,7 @@ def compute_metrics(pred):
 
     return bleu_metric
 
-
+#@profile
 def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cross_attentions, p_gen, global_step):
     global tokenizer, increment_for_tb, tb_writer, script
 
@@ -522,9 +530,10 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
     # Get p_gen
     p_gen = p_gen[0]
     p_gen = p_gen.squeeze(1).detach().cpu().numpy()
+    p_copy = 1 - p_gen
     
     if debug_vis:
-        logging.info(f"Shape of p_gen: {p_gen.shape}")
+        logging.info(f"Shape of p_copy: {p_copy.shape}")
         logging.info(f"Shape of input: {input_ids.shape}")
         logging.info(f"Shape of decoder input: {decoder_input_ids.shape}")
         logging.info(f"Shape of cross attention weights: {cross_attention_weights.shape}")
@@ -542,18 +551,18 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
     cross_attention_weights = cross_attention_weights[:len(input_tokens), :len(output_tokens)]
     # Remove PAD tokens from p_gen
     
-    p_gen = p_gen[:len(output_tokens)]
+    p_copy = p_copy[:len(output_tokens)]
 
     # Don't want to show the CLS and SEP tokens
     input_tokens = input_tokens[1:-1]
     output_tokens = output_tokens[1:-1]
     cross_attention_weights = cross_attention_weights[1:-1, 1:-1]
-    p_gen = p_gen[1:-1] 
+    p_copy = p_copy[1:-1] 
 
     if debug_vis:
         logging.info(f"Number of input tokens: {len(input_tokens)}")
         logging.info(f"Number of output tokens: {len(output_tokens)}")
-        logging.info(f"Number of p_gen tokens: {len(p_gen)}")
+        logging.info(f"Number of p_copy tokens: {len(p_copy)}")
         logging.info(f"Shape of cross attention weights: {cross_attention_weights.shape}")
 
     # Log cross attention weights as a heatmap
@@ -573,20 +582,20 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
 
     # Plot p_gen as a bar graph
     if debug_vis:
-        logging.info(f"Shape of new p_gen going into bar chart: {p_gen.shape}")
+        logging.info(f"Shape of new p_copy going into bar chart: {p_copy.shape}")
         logging.info(f"length of labels: {len(output_tokens)}")
         logging.info(output_tokens)
-        logging.info(f"p_gen: {p_gen}")
-    ax[1].bar(range(len(output_tokens)), p_gen)
+        logging.info(f"p_copy: {p_copy}")
+    ax[1].bar(range(len(output_tokens)), p_copy)
     # Label x axis as output tokens
     ax[1].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=60)
 
-    # Label y axis as "p_gen"
-    ax[1].set_ylabel("p_gen")
+    # Label y axis as "p_copy"
+    ax[1].set_ylabel("p_copy")
 
 
     # Save figure to file
-    fig.savefig(f"{args.LOG_DIR}/cross_attention_weights,pgen_histogram_{global_step}.png")
+    fig.savefig(f"{args.LOG_DIR}/vis/cross_attention_weights,p_copy_histogram_{global_step}.png")
     
 
 class CustomTensorboardCallback(TensorBoardCallback):
@@ -604,7 +613,7 @@ class CustomTensorboardCallback(TensorBoardCallback):
         mean_pgen = p_gens.mean()
         self.tb_writer.add_scalar("p_gen across training steps", mean_pgen, state.global_step)
 
-
+#@profile
 def main(args):
 # TRAIN_FILES, DEV_FILES, 
 # LID_MODELPATH, NUM_LID_LABELS, ENC_DEC_MODELPATH, alpha = 0.5, max_length = 512
@@ -663,7 +672,7 @@ def main(args):
     training_args = Seq2SeqTrainingArguments(
     output_dir=args.OUTPUT_DIR,
     resume_from_checkpoint=args.resume_from_checkpoint,
-    overwrite_output_dir=False,
+    overwrite_output_dir=False, #use False for continuing training
     num_train_epochs=args.epochs,
     # max_steps=train_steps,
     per_device_train_batch_size=args.batch_size,
@@ -672,12 +681,14 @@ def main(args):
     weight_decay=0.01,
     logging_dir=args.LOG_DIR,
     predict_with_generate=True,
+    generation_max_length=40, # defaults to model config max_length
     report_to="tensorboard",
-    logging_steps=100,
-    save_strategy="steps",
-    save_steps=2000, # For 15000 examples, this will save roughly every epoch with batch size 8
-    evaluation_strategy="steps",
-    eval_steps=100, 
+    evaluation_strategy="epoch",
+    logging_strategy="epoch",
+    save_strategy="epoch",
+    # eval_steps=2000, 
+    # logging_steps=2000,
+    # save_steps=2000, # For 15000 examples, this will save roughly every epoch with batch size 8
     load_best_model_at_end=True,
     save_total_limit=2
     )
@@ -730,31 +741,9 @@ def main(args):
 
 
         logging.info("DONE EVALUATION")
-        logging.info("Logging visualizations...")
-        # Take some sample from the test dataset
-        sample_size = min(50, len(test_dataset))
-        sample = test_dataset.select(range(sample_size))
 
-        # Pass each sample one by one
-        for i in range(sample_size):
-            # Get predictions
-            ## We are interested in passing this sample through the forward() function, 
-            ## which will log the visualizations for us
-
-            # Prepare inputs
-            input_ids = sample[i]["input_ids"].unsqueeze(0)
-            attention_mask = sample[i]["attention_mask"].unsqueeze(0)
-            decoder_input_ids = sample[i]["labels"].unsqueeze(0)
-
-            # decoder_attention_mask = sample[i]["decoder_attention_mask"].unsqueeze(0)
-            # Get predictions
-            model_outputs = model_enc_dec(input_ids = input_ids, attention_mask = attention_mask, \
-                decoder_input_ids = decoder_input_ids)
-
-            visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, model_outputs.cross_attentions, model_outputs.p_gen, -1)
         
-
-
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -777,6 +766,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logging.basicConfig(filename=f"{args.LOG_DIR}/log.txt", filemode="w", format="%(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+    os.makedirs(f"{args.LOG_DIR}/vis/", exist_ok=True)
 
 
     main(args)
