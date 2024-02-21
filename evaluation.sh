@@ -9,7 +9,7 @@
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=20G,mem_free=30G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
+#$ -l ram_free=10G,mem_free=10G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
 
 # Submit to GPU queue
 #$ -q g.q
@@ -27,7 +27,8 @@ max_lines_all=(15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
 EXP_ID="pgn"
-MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines"
+# MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines"
+MODEL_NAME="pgn-es~ca-epochs~$epochs-max_lines~$max_lines/"
 TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
@@ -36,8 +37,8 @@ OUTPUT_DIR="output_translations/$MODEL_NAME"
 mkdir -p $OUTPUT_DIR
 
 python evaluation.py \
---DATAFILE_L1 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.es_splits/test \
---DATAFILE_L2 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.ca_splits/test \
+--DATAFILE_L1 /export/b08/nbafna1/data/europarl.es-ca/splits/es/test \
+--DATAFILE_L2 /export/b08/nbafna1/data/europarl.es-ca/splits/ca/test \
 --MODEL_INPATH $MODEL_OUTPUT_DIR \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --output_dir $OUTPUT_DIR \

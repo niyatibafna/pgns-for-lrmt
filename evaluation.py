@@ -118,11 +118,11 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     # tokenizer = get_tokenizers.add_dialectid_tokens(tokenizer)
     device = torch.cuda.current_device() if torch.cuda.is_available() else -1
     print(f"Device: {device}")
-    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, max_length = 512, truncation = True, device=device)
-
-    # Save MT outputs
-    # scores = {"bho":{}, "mag":{}}
-    # for lang in ["bho", "mag"]:
+    pipe = pipeline("translation", model = model_inpath, tokenizer = tokenizer, \
+                    max_length = 20, truncation = True, device=device) 
+    # padding = True is the same as padding = "longest", 
+    # Check that padding strategy is the same as in training time!!!
+    # max_length is the maximum length of the output sequence
 
     print(f"Evaluating...")
     # hrl_sents, lrl_sents = \
@@ -137,7 +137,7 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     
     true_sents = dataset["target"]
     pred_sents = list()
-    for output in tqdm(pipe(KeyDataset(dataset, "source"), batch_size = 32, max_length = 512, truncation = True)):        
+    for output in tqdm(pipe(KeyDataset(dataset, "source"), batch_size = 32, max_length = 20, truncation = True)):        
         for sent in output:
             token_ids = tokenizer.convert_tokens_to_ids(sent["translation_text"].split())
             pred = tokenizer.decode(token_ids, skip_special_tokens = True, clean_up_tokenization_spaces = True)
