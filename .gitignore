@@ -5,3 +5,4 @@ models/*
 output_translations/*
 test_bleu.py
 utils/__pycache__/*
+logs_archive/*
