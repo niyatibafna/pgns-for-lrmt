@@ -491,8 +491,8 @@ def compute_metrics(pred):
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
 
     # Decode
-    predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+    predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True, clean_up_tokenization_spaces = True)
+    labels = tokenizer.batch_decode(labels, skip_special_tokens=True, clean_up_tokenization_spaces = True)
 
     # Compute BLEU
     ## If length of predictions is 0, we return 0
@@ -730,7 +730,7 @@ def main(args):
 
         # Log examples
         logging.info("Logging examples...")
-        for i in range(len(predictions[:10])):
+        for i in range(len(predictions[:100])):
             logging.info("Example {}: ".format(i))
             logging.info("Input: {}".format(inputs[i]))
             logging.info("Prediction: {}".format(predictions[i]))
