@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-#$ -N pgn
+#$ -N pgncopy-esca
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-3
-#$ -j y -o qsub_logs/pgn_$TASK_ID.out
+#$ -t 1-4
+#$ -j y -o qsub_logs/pgnesca_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=20G,mem_free=30G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
+#$ -l ram_free=14G,mem_free=14G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
 
 # Submit to GPU queue
 #$ -q g.q
@@ -17,14 +17,29 @@
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
 source /home/gqin2/scripts/acquire-gpu 1
 
+source ~/.bashrc
+conda deactivate
 conda activate pgnenv
+
 cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
+which python
 
-epochs_all=(40 30 20)
+echo "HOSTNAME: $(hostname)"
+echo
+echo CUDA in ENV:
+env | grep CUDA
+echo
+echo SGE in ENV:
+env | grep SGE
+
+set -x # print out every command that's run with a +
+nvidia-smi
+
+epochs_all=(40 40 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
-batch_size=32
-max_lines_all=(15000 30000 60000)
+batch_size=12
+max_lines_all=(5000 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
 EXP_ID="pgn"
@@ -40,8 +55,8 @@ mkdir -p $LOG_DIR
 
 
 python pgn_scratch.py \
---DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.es_splits \
---DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/europarl.es-ca.ca_splits \
+--DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/splits/es/ \
+--DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/splits/ca/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines
