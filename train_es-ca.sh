@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-#$ -N pgncopy-esca
+#$ -N pgn-esca
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-4
+#$ -t 1-2
 #$ -j y -o qsub_logs/pgnesca_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
@@ -15,11 +15,11 @@
 #$ -q g.q
 
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
-source /home/gqin2/scripts/acquire-gpu 1
-
 source ~/.bashrc
 conda deactivate
 conda activate pgnenv
+
+source /home/gqin2/scripts/acquire-gpu 1
 
 cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
@@ -41,10 +41,11 @@ epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=12
 max_lines_all=(5000 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
+vocab_size=8000
 
 EXP_ID="pgn"
-MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines"
-TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines"
+MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
+TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines-vocab_size~$vocab_size"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"

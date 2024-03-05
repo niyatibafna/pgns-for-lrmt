@@ -9,21 +9,36 @@
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=15G,mem_free=15G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
+#$ -l ram_free=10G,mem_free=10G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
 
 # Submit to GPU queue
 #$ -q g.q
 
 # Assign a free-GPU to your program (make sure -n matches the requested number of GPUs above)
-source /home/gqin2/scripts/acquire-gpu -n 1
-
+source ~/.bashrc
+conda deactivate
 conda activate pgnenv
+
+source /home/gqin2/scripts/acquire-gpu 1
+
 cd /export/b08/nbafna1/projects/pgns-for-lrmt/
 
+which python
+
+echo "HOSTNAME: $(hostname)"
+echo
+echo CUDA in ENV:
+env | grep CUDA
+echo
+echo SGE in ENV:
+env | grep SGE
+
+set -x # print out every command that's run with a +
+nvidia-smi
 
 epochs_all=(60 50 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
-batch_size=12
+batch_size=4
 max_lines_all=(5000 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 
