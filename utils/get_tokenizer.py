@@ -17,7 +17,7 @@ def train_or_load_tokenizer(TOKENIZER_OUTPATH, \
     
 
     if not os.path.exists(TOKENIZER_OUTPATH) and FILES is not None:
-        print("Training tokenizer...")
+        print(f"Training tokenizer of size {vocab_size} ...")
         special_tokens = [
         "[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", "<S>", "<T>"
         ]

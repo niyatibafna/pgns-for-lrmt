@@ -347,21 +347,19 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
 
 
 
-def init_tokenizer(TOKENIZER_INPATH, FILES):
+def init_tokenizer(TOKENIZER_INPATH, FILES = None, vocab_size = 16000):
     '''Note that if we are using a pretrained tokenizer,
     we should simply pass the HF key of the model as TOKENIZER_INPATH'''
 
     logging.info("Loading src tokenizer from {}".format(TOKENIZER_INPATH))
     tokenizer = get_tokenizer.train_or_load_tokenizer(TOKENIZER_INPATH,  \
-        FILES = FILES)
+        FILES = FILES, vocab_size = vocab_size)
     # Looks like HF MT doesn't support separate source and target tokenizers
     # logging.info("Loading tgt tokenizer from {}".format(TGT_TOKENIZER_INPATH))
     # tgt_tokenizer = get_tokenizer.train_or_load_tokenizer(TGT_TOKENIZER_INPATH, tokenizer)
 
     ### Optionally add language ID tokens
-    # tokenizer = get_tokenizer.add_langid_tokens(tokenizer, LANGS)
-
-    
+    # tokenizer = get_tokenizer.add_langid_tokens(tokenizer, LANGS)    
     return tokenizer
 
 def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None, force_p_gen = None):
@@ -639,7 +637,7 @@ def main(args):
             os.path.join(args.DATADIR_L1, "test"),\
             os.path.join(args.DATADIR_L2, "test")]
     tokenizer = init_tokenizer(args.TOKENIZER_INPATH, \
-                               FILES)
+                               FILES, args.vocab_size)
 
     logging.info("Initializing models...")
     model_enc_dec = init_models(args.ENC_DEC_MODELPATH, tokenizer, args.PT_CKPT)
@@ -753,6 +751,7 @@ if __name__ == "__main__":
     parser.add_argument("--TOKENIZER_INPATH", type=str, default=None, help="Path to tokenizer - if self-trained, put path. If None, \
                         the tokenizer from the encoder model will be used")
     parser.add_argument("--PT_CKPT", type=str, default=None, help="Path to PGN checkpoint")
+    parser.add_argument("--vocab_size", type=int, default = 16_000)
     parser.add_argument("--max_length", type=int, default = 512)
     parser.add_argument("--OUTPUT_DIR", type=str, default="output_dir", help="Path to save model")
     parser.add_argument("--LOG_DIR", type=str, default="logs", help="Path to save tensorboard logs")
