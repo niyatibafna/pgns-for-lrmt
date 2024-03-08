@@ -74,17 +74,12 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
         config: Optional[PretrainedConfig] = None,
         encoder: Optional[PreTrainedModel] = None,
         decoder: Optional[PreTrainedModel] = None,
-        force_p_gen: Optional[float] = None,
     ):
         self.log = {}
         self.increment = 0
         super().__init__(config, encoder, decoder)
         self.hidden_size = self.encoder.config.hidden_size
         self.generate_prob = nn.Linear(self.hidden_size * 3, 1)
-        self.generate_bias = nn.Parameter(torch.zeros(1))
-        self.force_p_gen = force_p_gen
-        print(f"Force p_gen: {self.force_p_gen}")
-        logging.info(f"Force p_gen: {self.force_p_gen}")
 
 
     
@@ -247,13 +242,14 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
         # Then, we pass this through a linear layer to get the probability of generating the next word
         ## (B, S2, 3H) -> (B, S2, 1)
         ## We use sigmoid to get a probability
-        p_gen = torch.sigmoid(self.generate_prob(concat_vector) + self.generate_bias)
+        p_gen = torch.sigmoid(self.generate_prob(concat_vector))
 
         if self.force_p_gen is not None:
             # We're forcing p_gen, initialize it directly
             p_gen = torch.ones(cross_attention_weights.shape[0], cross_attention_weights.shape[2], 1).to(cross_attention_weights.device) * self.force_p_gen
-            # print(f"p_gen: {p_gen}")
+            print(f"p_gen: {p_gen}")
         
+        print(f"p_gen: {p_gen}")
         # Note that copy_prob = 1 - generate_prob
 
         # Mixing probabilities from generate and copy mechanism
@@ -375,24 +371,18 @@ def init_models(ENC_DEC_MODELPATH, tokenizer, PT_CKPT = None, force_p_gen = None
     if PT_CKPT:
         # First we check if there is some enc-dec checkpoint (along with cross-attention weights)
         logging.info("Loading encoder-decoder model from {}".format(PT_CKPT))
-        model_enc_dec = EncoderDecoderModelPGN.from_pretrained(PT_CKPT)
+        model_enc_dec = EncoderDecoderModel.from_pretrained(PT_CKPT)
     elif ENC_DEC_MODELPATH:
         # If not, we check if the encoder and decoder can be initalized separately from some model
         logging.info("Loading encoder-decoder model from {}".format(ENC_DEC_MODELPATH))
-        model_enc_dec = EncoderDecoderModelPGN.from_encoder_decoder_pretrained(ENC_DEC_MODELPATH, ENC_DEC_MODELPATH)
+        model_enc_dec = EncoderDecoderModel.from_encoder_decoder_pretrained(ENC_DEC_MODELPATH, ENC_DEC_MODELPATH)
     else:
         # If not, we initialize the encoder and decoder from scratch
         logging.info("Initializing encoder-decoder model from scratch")
         encoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
         decoder_config = BertConfig(vocab_size=len(tokenizer), num_hidden_layers=6, num_attention_heads=4, hidden_size=512, intermediate_size=1024)
         config = EncoderDecoderConfig.from_encoder_decoder_configs(encoder_config, decoder_config)
-        model_enc_dec = EncoderDecoderModelPGN(config, force_p_gen = force_p_gen)
-
-    ## Set model parameters
-    # model_enc_dec.model_lid = model_lid
-    # model_enc_dec.alpha = alpha
-    # model_enc_dec.tau = tau
-    # model_enc_dec.istauhard = istauhard
+        model_enc_dec = EncoderDecoderModel(config)
 
     if model_enc_dec.encoder.config.vocab_size !=len(tokenizer):
         model_enc_dec.encoder.resize_token_embeddings(len(tokenizer))
@@ -570,13 +560,12 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
     # Log cross attention weights as a heatmap
     ## Here, we decide whether to use Devanagari (hi-mr) or Latin (for es-ca)
     if script == "dev":
-        # Only labels in Devanagari
+        # All labels in Devanagari font  
         matplotlib.rcParams['font.family'] = 'Noto Serif Devanagari'
-    
         # Reduce font size
-    matplotlib.rcParams.update({'font.size': 40})
+    matplotlib.rcParams.update({'font.size': 22})
     # Prepare figure
-    fig, ax = plt.subplots(2, 1, figsize=(80, 40))
+    fig, ax = plt.subplots(2, 1, figsize=(40, 20))
     # Set up heatmap as first subplot
     sns.heatmap(cross_attention_weights, ax = ax[0], cbar=False)
     # Set up labels
@@ -593,22 +582,12 @@ def visualization_of_cross_attentions_and_pgen(input_ids, decoder_input_ids, cro
     # Label x axis as output tokens
     ax[1].set_xticks(ticks=range(len(output_tokens)), labels=output_tokens, rotation=60)
 
-    
-        # for ax_no in {0,1}:
-        #     for tick in ax[ax_no].get_xticklabels():
-        #         tick.set_fontfamily("Noto Serif Devanagari")
-        #     for tick in ax[ax_no].get_yticklabels():
-        #         tick.set_fontfamily("Noto Serif Devanagari")
-
-    # Label y axis as "p_copy" in Latin script
-    ## Script needs to be changed to English for this to work
+    # Label y axis as "p_copy"
     ax[1].set_ylabel("p_copy")
-    
-    # Put space between subplots
-    plt.subplots_adjust(hspace=0.3)
+
 
     # Save figure to file
-    fig.savefig(f"{args.LOG_DIR}/vis/cross_attention_weights,p_copy_histogram_{global_step}.png", bbox_inches='tight')
+    fig.savefig(f"{args.LOG_DIR}/vis/cross_attention_weights,p_copy_histogram_{global_step}.png")
     
 
 class CustomTensorboardCallback(TensorBoardCallback):
@@ -655,7 +634,7 @@ def main(args):
                                FILES, args.vocab_size)
 
     logging.info("Initializing models...")
-    model_enc_dec = init_models(args.ENC_DEC_MODELPATH, tokenizer, args.PT_CKPT, args.force_p_gen)
+    model_enc_dec = init_models(args.ENC_DEC_MODELPATH, tokenizer, args.PT_CKPT)
     
     logging.info("Getting datasets...")
     # Get dataset splits, and preprocess them
@@ -714,7 +693,6 @@ def main(args):
         tokenizer=tokenizer,
         data_collator= data_collator,
         compute_metrics=compute_metrics,
-        callbacks=[CustomTensorboardCallback],
     )   
 
     
