@@ -3,7 +3,7 @@
 #$ -N van-esca_wm
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-4
+#$ -t 1,3
 #$ -j y -o qsub_logs/van-esca_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
@@ -55,7 +55,7 @@ mkdir -p $MODEL_OUTPUT_DIR
 mkdir -p $LOG_DIR
 
 
-python pgn_scratch.py \
+python vanilla.py \
 --DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/ \
 --DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \

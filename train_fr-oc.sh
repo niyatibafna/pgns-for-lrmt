@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#$ -N pgn-esca
+#$ -N pgn-froc
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
 #$ -t 1-4
-#$ -j y -o qsub_logs/pgnesca_$TASK_ID.out
+#$ -j y -o qsub_logs/pgnfroc_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -44,8 +44,8 @@ max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 vocab_size=16000
 
 EXP_ID="pgn"
-MODEL_NAME="$EXP_ID-es~ca-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
-TOKENIZER_NAME="$EXP_ID-es~ca-wm-max_lines~$max_lines-vocab_size~$vocab_size"
+MODEL_NAME="$EXP_ID-fr~oc-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
+TOKENIZER_NAME="$EXP_ID-fr~oc-wm-max_lines~$max_lines-vocab_size~$vocab_size"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
@@ -56,8 +56,8 @@ mkdir -p $LOG_DIR
 
 
 python pgn_scratch.py \
---DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/ \
---DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/ \
+--DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/ \
+--DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines --vocab_size $vocab_size

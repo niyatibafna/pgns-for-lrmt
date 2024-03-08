@@ -41,7 +41,7 @@ epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=12
 max_lines_all=(5000 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
-vocab_size=8000
+vocab_size=16000
 
 EXP_ID="pgn"
 MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"

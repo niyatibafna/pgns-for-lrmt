@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-#$ -N pgn-esca
+#$ -N debug_esca
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-4
-#$ -j y -o qsub_logs/pgnesca_$TASK_ID.out
+#$ -t 1
+#$ -j y -o qsub_logs/debug_esca_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=14G,mem_free=14G,gpu=1,hostname=!c08*&!c07*&!c04*&!c25*&c*
+#$ -l ram_free=14G,mem_free=14G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
 
 # Submit to GPU queue
 #$ -q g.q
@@ -36,16 +36,16 @@ env | grep SGE
 set -x # print out every command that's run with a +
 nvidia-smi
 
-epochs_all=(50 50 30 20)
+epochs_all=(40 40 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=12
-max_lines_all=(5000 15000 30000 60000)
+max_lines_all=(100 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 vocab_size=16000
 
-EXP_ID="pgn"
-MODEL_NAME="$EXP_ID-es~ca-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
-TOKENIZER_NAME="$EXP_ID-es~ca-wm-max_lines~$max_lines-vocab_size~$vocab_size"
+EXP_ID="debug_esca"
+MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
+TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines-vocab_size~$vocab_size"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
@@ -56,11 +56,11 @@ mkdir -p $LOG_DIR
 
 
 python pgn_scratch.py \
---DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/ \
---DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/ \
+--DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/splits/es/ \
+--DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/splits/ca/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
---max_lines $max_lines --vocab_size $vocab_size
+--max_lines $max_lines
 
 
 # parser.add_argument("--TRAIN_FILE_L1", type=str, default=None)

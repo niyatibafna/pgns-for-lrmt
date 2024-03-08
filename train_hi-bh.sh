@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#$ -N pgn-esca
+#$ -N pgn-hibh
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-4
-#$ -j y -o qsub_logs/pgnesca_$TASK_ID.out
+#$ -t 1,3
+#$ -j y -o qsub_logs/pgnhibho_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
@@ -36,7 +36,7 @@ env | grep SGE
 set -x # print out every command that's run with a +
 nvidia-smi
 
-epochs_all=(50 50 30 20)
+epochs_all=(60 60 40 40)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=12
 max_lines_all=(5000 15000 30000 60000)
@@ -44,8 +44,8 @@ max_lines=${max_lines_all[$SGE_TASK_ID-1]}
 vocab_size=16000
 
 EXP_ID="pgn"
-MODEL_NAME="$EXP_ID-es~ca-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
-TOKENIZER_NAME="$EXP_ID-es~ca-wm-max_lines~$max_lines-vocab_size~$vocab_size"
+MODEL_NAME="$EXP_ID-hi~bh-nllb-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
+TOKENIZER_NAME="$EXP_ID-hi~bh-nllb-max_lines~$max_lines-vocab_size~$vocab_size"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
@@ -56,8 +56,8 @@ mkdir -p $LOG_DIR
 
 
 python pgn_scratch.py \
---DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/ \
---DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/ \
+--DATADIR_L1 /export/b08/nbafna1/data/nllb/hin-bho/splits/hin \
+--DATADIR_L2 /export/b08/nbafna1/data/nllb/hin-bho/splits/bho \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines --vocab_size $vocab_size

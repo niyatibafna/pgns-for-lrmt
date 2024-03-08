@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-#$ -N van-esca
+#$ -N van-froc
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-2
-#$ -j y -o qsub_logs/van-esca_$TASK_ID.out
+#$ -t 1,3
+#$ -j y -o qsub_logs/van-froc_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
 # the number of GPUs you want,
 # and the hostnames of the machines for special GPU models.
-#$ -l ram_free=10G,mem_free=10G,gpu=1,hostname=b1[123456789]|c0*|c1[123456789]
+#$ -l ram_free=10G,mem_free=10G,gpu=1,hostname=!c08*&!c07*&!c04*&!c25*&c*
 
 # Submit to GPU queue
 #$ -q g.q
@@ -35,17 +35,17 @@ env | grep SGE
 set -x # print out every command that's run with a +
 nvidia-smi
 
-epochs_all=(40 40 30 20)
+epochs_all=(50 50 30 20)
 epochs=${epochs_all[$SGE_TASK_ID-1]}
 batch_size=12
 max_lines_all=(5000 15000 30000 60000)
 max_lines=${max_lines_all[$SGE_TASK_ID-1]}
-vocab_size=8000
+vocab_size=16000
 pgen=1
 
 EXP_ID="vanilla"
-MODEL_NAME="$EXP_ID-es~ca-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
-TOKENIZER_NAME="$EXP_ID-es~ca-max_lines~$max_lines-vocab_size~$vocab_size"
+MODEL_NAME="$EXP_ID-fr~oc-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
+TOKENIZER_NAME="$EXP_ID-fr~oc-wm-max_lines~$max_lines-vocab_size~$vocab_size"
 
 MODEL_OUTPUT_DIR="models/$MODEL_NAME"
 TOKENIZER_INPATH="tokenizers/$TOKENIZER_NAME"
@@ -55,12 +55,12 @@ mkdir -p $MODEL_OUTPUT_DIR
 mkdir -p $LOG_DIR
 
 
-python pgn_scratch.py \
---DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/splits/es/ \
---DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/splits/ca/ \
+python vanilla.py \
+--DATADIR_L1 /export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/ \
+--DATADIR_L2 /export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/ \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
---max_lines $max_lines --force_p_gen $pgen
+--max_lines $max_lines --force_p_gen $pgen --vocab_size $vocab_size
 
 
 # parser.add_argument("--TRAIN_FILE_L1", type=str, default=None)
