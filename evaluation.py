@@ -133,7 +133,7 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     # Create a new dataset that has source and target as columns
     dataset = Dataset.from_dict({"source": dataset["source"]["text"], "target": dataset["target"]["text"]})
     # Take only 1000 examples
-    dataset = dataset.select(range(1000))
+    # dataset = dataset.select(range(100))
     
     true_sents = dataset["target"]
     pred_sents = list()
@@ -143,7 +143,7 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
             pred = tokenizer.decode(token_ids, skip_special_tokens = True, clean_up_tokenization_spaces = True)
 
             # Process the sentence to combine subwords
-            pred = pred.replace(" ##", "")
+            # pred = pred.replace(" ##", "")
 
             print(f"Pred: {pred}")
             pred_sents.append(pred)
@@ -177,9 +177,9 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     #     f.write("\n".join(hrl_sents))
 
     if save_results:
-        RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/results_bleu_scores.json" \
+        RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
             if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-        save_results_to_file(EXP_ID, DATAFILE_L1, score, RECORD_FILE= RECORD_FILE)
+        save_results_to_file(EXP_ID, DATAFILE_L1, {"bleu":score}, RECORD_FILE= RECORD_FILE)
 
 
 def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, translations_file, save_results = True, charbleu = False, SEED = 42):

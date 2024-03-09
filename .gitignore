@@ -8,4 +8,4 @@ utils/__pycache__/*
 logs_archive/*
 output_analysis/output_translations/*
 output_analysis/qsub_logs/*
-
+output_analysis/results_bleu_scores.json
