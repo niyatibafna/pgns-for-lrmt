@@ -743,9 +743,9 @@ def main(args):
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
 
         # Decode into text
-        inputs = tokenizer.batch_decode(test_dataset["input_ids"], skip_special_tokens=True)
-        predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-        labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        inputs = tokenizer.batch_decode(test_dataset["input_ids"], skip_special_tokens=True, clean_up_tokenization_spaces = True)
+        predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True, clean_up_tokenization_spaces = True)
+        labels = tokenizer.batch_decode(labels, skip_special_tokens=True, clean_up_tokenization_spaces = True)
 
         # Log examples
         logging.info("Logging examples...")
