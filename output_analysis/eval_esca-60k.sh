@@ -45,7 +45,9 @@ vocab_size=16000
 
 PROJ_DIR="/export/b08/nbafna1/projects/pgns-for-lrmt/"
 
-EXP_ID="pgn"
+# EXP_ID="pgn"
+EXP_ID="vanilla"
+
 MODEL_NAME="$EXP_ID-es~ca-wm-epochs~$epochs-max_lines~$max_lines-vocab_size~$vocab_size"
 TOKENIZER_NAME="$EXP_ID-es~ca-wm-max_lines~$max_lines-vocab_size~$vocab_size"
 

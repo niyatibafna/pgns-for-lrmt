@@ -95,7 +95,7 @@ python $PROJ_DIR/evaluation.py \
 --MODEL_INPATH $MODEL_OUTPUT_DIR \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --output_dir $OUTPUT_DIR \
---EXP_ID $EXP_ID \
+--EXP_ID $MODEL_NAME \
 --save_results
 
 
