@@ -235,10 +235,10 @@ class EncoderDecoderModelPGN(EncoderDecoderModel):
         
         # (General case) We have to calculate p_gen
         # First, we collapse multihead attention into a single head
-        ## (B, H, S2, S1) -> (B, S2, S1)
+        ## (B, H, S2, S1) -> (B, S2, S1) (here H is number of heads)
         attentions = cross_attention_weights.mean(dim=1)
         # Then, we find the context vector by taking a weighted sum of the encoder hidden states
-        ## (B, S2, S1) x (B, S1, H) -> (B, S2, H)
+        ## (B, S2, S1) x (B, S1, H) -> (B, S2, H) (here, and onwards, H is hidden size)
         context_vector = torch.bmm(attentions, encoder_hidden_states)
         # Then, we concatenate the context vector with the decoder hidden states and the decoder input
         ## (B, S2, H) + (B, S2, H) + (B, S2, H) -> (B, S2, 3H)
