@@ -10,3 +10,4 @@ output_analysis/output_translations/*
 output_analysis/qsub_logs/*
 output_analysis/results_bleu_scores.json
 output_analysis/logs/*
+output_analysis/model_output_files/*
