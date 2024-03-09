@@ -91,12 +91,18 @@ def evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath,\
 
 
 
-def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, SEED = 42,  \
+def evaluate_mt_bleu(inputs_file, references_file, tokenizer_inpath, model_inpath, SEED = 42,  \
                     charbleu = False, \
                     save_results = True, output_dir = None, \
                     EXP_ID = None):
     '''Runs evaluation for MT, also saves the results automatically in experiment records
-    eval_datapath: eval DIR to the MT parallel data'''
+    eval_datapath: eval DIR to the MT parallel data
+    Args:
+        inputs_file: Path to the source inputs
+        references_file: Path to the gold targets
+        tokenizer_inpath: Path to the tokenizer
+        model_inpath: Path to the model
+    '''
 
     print("Evaluating MT! ")
     if charbleu:
@@ -127,8 +133,8 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     print(f"Evaluating...")
     # hrl_sents, lrl_sents = \
         # eval_datareader.get_data_mt(eval_datapath, lang, SEED = SEED)
-    dataset = load_dataset("text", data_files={"source": [DATAFILE_L1], \
-            "target": [DATAFILE_L2]})
+    dataset = load_dataset("text", data_files={"source": [inputs_file], \
+            "target": [references_file]})
 
     # Create a new dataset that has source and target as columns
     dataset = Dataset.from_dict({"source": dataset["source"]["text"], "target": dataset["target"]["text"]})
@@ -179,10 +185,13 @@ def evaluate_mt_bleu(DATAFILE_L1, DATAFILE_L2, tokenizer_inpath, model_inpath, S
     if save_results:
         RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
             if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-        save_results_to_file(EXP_ID, DATAFILE_L1, {"bleu":score}, RECORD_FILE= RECORD_FILE)
+        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= RECORD_FILE)
 
 
-def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, translations_file, save_results = True, charbleu = False, SEED = 42):
+def evaluate_mt_bleu_from_file(references_file, predictions_file , \
+                               save_results = True, inputs_file = None, \
+                                charbleu = False, SEED = 42, \
+                                EXP_ID = None):
     '''Runs evaluation for MT if predictions (and true sents) are already saved in some file
     Also saves the results automatically in experiment records
     eval_datapath: eval DIR to the MT parallel data'''
@@ -196,9 +205,9 @@ def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, translations_file, save_re
     print("Char-level: {}, max order: {}".format(charbleu, max_order))
     #seq2seq Pipeline with model_inpath and tokenizer
     
-    with open(eval_datapath, "r") as f:
+    with open(references_file, "r") as f:
         true_sents = f.read().split("\n")
-    with open(translations_file, "r") as f:
+    with open(predictions_file, "r") as f:
         pred_sents = f.read().split("\n")
     
     true_sents = [[true_sent] for true_sent in true_sents]
@@ -211,14 +220,16 @@ def evaluate_mt_bleu_from_file(EXP_ID, eval_datapath, translations_file, save_re
         true_sents = [[" ".join(list(true_sent[0]))] for true_sent in true_sents]
     
     # Find BLEU score
+    # Find BLEU score
     bleu = evaluate.load("bleu")
-    scores = bleu.compute(predictions=pred_sents, references=true_sents, max_order=max_order)
-    print("Score: ", scores)
+    metric = bleu.compute(predictions=pred_sents, references=true_sents, max_order=max_order)
+    score = metric["bleu"]
+    print(f"BLEU: {score}")
 
-    # if save_results:
-    #     RECORD_FILE = "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt.json" \
-    #         if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-    #     save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE= RECORD_FILE)
+    if save_results:
+        RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
+            if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
+        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= RECORD_FILE)
 
 
 
@@ -284,7 +295,7 @@ if __name__=="__main__":
     parser.add_argument("--output_dir", type=str, default=None, help="Output directory to save the results")
     # Accept translated data from_file,
     parser.add_argument("--from_file", action="store_true", help="Evaluate from file")
-    parser.add_argument("--translations_file", type=str, default=None, help="Path to the transformed data")
+    parser.add_argument("--predictions_file", type=str, default=None, help="Path to the transformed data")
     
 
 
@@ -304,20 +315,10 @@ if __name__=="__main__":
                         EXP_ID = args.EXP_ID)
         else:
             # Assume we evaluate from file
-            # n = 3
-            # temperature = 0.4
-            # alpha_clm = 0.75
-            # for lang in ["mag"]: #, "mag"]:
-            #     for temperature in [0.1, 0.2, 0.4, 0.8, 1]:
-                
-            #         EXP_ID = "hin_to_{}.n_{}.temperature_{}.alphaclm_{}".format(lang, n, temperature, alpha_clm)
-            #         eval_datapath = "../data/raw_parallel/loresmt/hi2{0}.test.{0}".format(lang)
-            #         transformed_datapath = "../data_transformation/outputs/{0}/hi2{0}.test.hi/hin_to_{0}.n_{1}.temperature_{2}.alphaclm_{3}.txt".format(lang, n, temperature, alpha_clm)
-                    # transformed_datapath =  "../data/raw_parallel/loresmt/hi2{0}.test.hi".format(lang)
             print("Evaluating from file")
             # evaluate_mt_bleu_from_file(args.EXP_ID, args.DATAPATH, args.transformed_datapath, save_results = args.save_results, charbleu = True)
-            evaluate_mt_bleu_from_file(args.DATAFILE_L1, args.DATAFILE_L2, args.TOKENIZER_INPATH, args.MODEL_INPATH, SEED = 42,  \
-                    charbleu = False, \
-                    save_results = args.save_results, translations_file = args.translations_file, \
-                        EXP_ID = args.EXP_ID)
+            evaluate_mt_bleu_from_file(references_file=args.DATAFILE_L2, predictions_file=args.predictions_file, \
+                                       save_results=args.save_results, charbleu=False, EXP_ID=args.EXP_ID, \
+                                    inputs_file=args.DATAFILE_L1)
+                    
     # see_results()
