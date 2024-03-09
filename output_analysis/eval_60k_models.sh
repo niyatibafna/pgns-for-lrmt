@@ -3,7 +3,7 @@
 #$ -N pgneval
 #$ -wd /export/b08/nbafna1/projects/pgns-for-lrmt/
 #$ -m e
-#$ -t 1-8
+#$ -t 1
 #$ -j y -o output_analysis/qsub_logs/pgneval_$TASK_ID.out
 
 # Fill out RAM/memory (same thing) request,
