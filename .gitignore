@@ -13,3 +13,4 @@ output_analysis/logs/*
 output_analysis/model_output_files/*
 output_analysis/test_set_splits_files/*
 output_analysis/test_set_splits_sentidx/*
+output_analysis/results_60k*.json
