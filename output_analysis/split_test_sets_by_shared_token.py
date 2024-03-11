@@ -11,21 +11,26 @@ MODEL_NAMES=["-es~ca-wm-epochs~20-max_lines~60000-vocab_size~16000", \
 PGN_MODEL_NAMES=["pgn"+model_name for model_name in MODEL_NAMES]
 VANILLA_MODEL_NAMES=["vanilla"+model_name for model_name in MODEL_NAMES]
 
-DATAFILE_L1S=["/export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/test", \
-"/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/test", \
-"/export/b08/nbafna1/data/nllb/hin-bho/splits/hin/test", \
-"/export/b08/nbafna1/data/cvit-pib-v1.3/hi-mr/splits/hi/test", \
-"/export/b08/nbafna1/data/wikimatrix/fr-de/splits/fr/test", \
-"/export/b08/nbafna1/data/wikimatrix/es-en/splits/es/test", \
-]
+# DATAFILE_L1S=["/export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/test", \
+# "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/test", \
+# "/export/b08/nbafna1/data/nllb/hin-bho/splits/hin/test", \
+# "/export/b08/nbafna1/data/cvit-pib-v1.3/hi-mr/splits/hi/test", \
+# "/export/b08/nbafna1/data/wikimatrix/fr-de/splits/fr/test", \
+# "/export/b08/nbafna1/data/wikimatrix/es-en/splits/es/test", \
+# ]
 
-DATAFILE_L2S=["/export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/test", \
-"/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/test", \
-"/export/b08/nbafna1/data/nllb/hin-bho/splits/bho/test", \
-"/export/b08/nbafna1/data/cvit-pib-v1.3/hi-mr/splits/mr/test", \
-"/export/b08/nbafna1/data/wikimatrix/fr-de/splits/de/test", \
-"/export/b08/nbafna1/data/wikimatrix/es-en/splits/en/test", \
-]
+# DATAFILE_L2S=["/export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/test", \
+# "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/test", \
+# "/export/b08/nbafna1/data/nllb/hin-bho/splits/bho/test", \
+# "/export/b08/nbafna1/data/cvit-pib-v1.3/hi-mr/splits/mr/test", \
+# "/export/b08/nbafna1/data/wikimatrix/fr-de/splits/de/test", \
+# "/export/b08/nbafna1/data/wikimatrix/es-en/splits/en/test", \
+# ]
+LOGDIR = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/logs"
+# inputs.txt
+DATAFILE_L1S=[f"{LOGDIR}/pgn{MODEL_NAMES[i]}/inputs.txt" for i in range(6)]
+DATAFILE_L2S=[f"{LOGDIR}/pgn{MODEL_NAMES[i]}/references.txt" for i in range(6)]
+
 lang_pairs = ["es-ca", "fr-oc", "hi-bh", "hi-mr", "fr-de", "es-en"]
 
 OUTPUT_DIR = "test_set_splits_sentidx/"
@@ -37,7 +42,7 @@ os.makedirs(OUTPUT_DIR_FILES, exist_ok=True)
 MODEL_OUTPUT_FILES = "model_output_files/"
 os.makedirs(MODEL_OUTPUT_FILES, exist_ok=True)
 
-for i in range(len(lang_pairs[:4])):
+for i in range(len(lang_pairs)):
     print(f"Processing {lang_pairs[i]}")
     # Get source and target sentences
     with open(DATAFILE_L1S[i], "r") as f:

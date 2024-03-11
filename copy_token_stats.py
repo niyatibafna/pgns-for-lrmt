@@ -13,11 +13,18 @@
 # file1 = "/export/b08/nbafna1/data/nllb/hin-bho/splits/hin"
 # file2 = "/export/b08/nbafna1/data/nllb/hin-bho/splits/bho"
 
-file1 = "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/"
-file2 = "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/" 
+# file1 = "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/fr/"
+# file2 = "/export/b08/nbafna1/data/wikimatrix/fr-oc/splits/oc/" 
 
 # file1 = "/export/b08/nbafna1/data/wikimatrix/es-ca/splits/es/"
 # file2 = "/export/b08/nbafna1/data/wikimatrix/es-ca/splits/ca/"
+
+# file1 = "/export/b08/nbafna1/data/wikimatrix/fr-de/splits/fr/"
+# file2 = "/export/b08/nbafna1/data/wikimatrix/fr-de/splits/de/" 
+
+file1 = "/export/b08/nbafna1/data/wikimatrix/es-en/splits/es/"
+file2 = "/export/b08/nbafna1/data/wikimatrix/es-en/splits/en/" 
+
 file1 = file1 + "/train"
 file2 = file2 + "/train"
 

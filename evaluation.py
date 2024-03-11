@@ -93,7 +93,8 @@ def evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath,\
 
 def evaluate_mt_bleu(inputs_file, references_file, tokenizer_inpath, model_inpath, SEED = 42,  \
                     charbleu = False, \
-                    save_results = True, output_dir = None, \
+                    save_results = True, record_file = None,
+                    output_dir = None, \
                     EXP_ID = None):
     '''Runs evaluation for MT, also saves the results automatically in experiment records
     eval_datapath: eval DIR to the MT parallel data
@@ -183,13 +184,15 @@ def evaluate_mt_bleu(inputs_file, references_file, tokenizer_inpath, model_inpat
     #     f.write("\n".join(hrl_sents))
 
     if save_results:
-        RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
+        if not record_file:
+            record_file = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
             if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= RECORD_FILE)
+        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= record_file)
 
 
 def evaluate_mt_bleu_from_file(references_file, predictions_file , \
-                               save_results = True, inputs_file = None, \
+                               save_results = True, record_file = None,
+                               inputs_file = None, \
                                 charbleu = False, SEED = 42, \
                                 EXP_ID = None):
     '''Runs evaluation for MT if predictions (and true sents) are already saved in some file
@@ -227,10 +230,10 @@ def evaluate_mt_bleu_from_file(references_file, predictions_file , \
     print(f"BLEU: {score}")
 
     if save_results:
-        RECORD_FILE = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
+        if not record_file:
+            record_file = "/export/b08/nbafna1/projects/pgns-for-lrmt/output_analysis/results_bleu_scores.json" \
             if not charbleu else "/home/nbafna/scratch/repos/large-language-models-for-related-dialects/evaluation/outputs/experiments_results_mt_charbleu.json"
-        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= RECORD_FILE)
-
+        save_results_to_file(EXP_ID, inputs_file, {"bleu":score}, RECORD_FILE= record_file)
 
 
 def save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE = None):
@@ -269,21 +272,7 @@ def save_results_to_file(EXP_ID, eval_datapath, scores, RECORD_FILE = None):
 
 
 if __name__=="__main__":
-    # print(PTLM_NAME)
-    # eval_datapath = "../data/eval_POS/bho.nsurl.bis.conllu"
-    # tokenizer_inpath="../finetuning_outputs/models/bho/ft_single_transfer_eqsub_pos.bho.ptlm_mono_eqsub.mag.batchsize_16.vocabsize_30522.epochs_5/tokenizer.json"
-    # model_inpath = "../finetuning_outputs/models/bho/ft_single_transfer_eqsub_pos.bho.ptlm_mono_eqsub.mag.batchsize_16.vocabsize_30522.epochs_5/"
-    # EXP_ID = "ft_single_transfer_eqsub_pos.bho.ptlm_mono_eqsub.mag.batchsize_16.vocabsize_30522.epochs_5"
-    # evaluate_pos(EXP_ID, eval_datapath, tokenizer_inpath, model_inpath, SEED = 42, save_results=False)
-
-    # DATAPATH = "../data/raw_parallel/loresmt/"
-    # TOKENIZER_INPATH="../training_outputs/tokenizers/awa_bho_bra_mag_mai/lm_multi_abbmm.awa_bho_bra_mag_mai.batchsize_16.vocabsize_30522.epochs_20.json"
-    # MODEL_INPATH = "../training_outputs_tali/models/abbhmm/tali_mt.abbhmm.lidpret_abbmm.encdecpret_abbmm.alpha_0.5.hardtau_0.1.maxlen_512.hrlsents_50000.epochs_10/checkpoint-375000/"
-
-    # EXP_ID = "tali_mt.abbhmm.lidpret_abbmm.encdecpret_abbmm.alpha_0.5.hardtau_0.1.maxlen_512.hrlsents_50000.epochs_10"
-
-    # Take the above arguments from argparse
-
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--DATAFILE_L1", type=str, required=True, help="Path to the eval data directory")
     parser.add_argument("--DATAFILE_L2", type=str, required=True, help="Path to the eval data directory")
@@ -291,14 +280,12 @@ if __name__=="__main__":
     parser.add_argument("--MODEL_INPATH", type=str, default=None, help="Path to the model")
     parser.add_argument("--EXP_ID", type=str, required=True, help="Experiment ID")
     parser.add_argument("--save_results", action="store_true", help="Save results to file")
+    parser.add_argument("--record_file", type=str, default=None, help="Path to the record file")
     parser.add_argument("--task", type=str, default="translation", help="Task to evaluate")
     parser.add_argument("--output_dir", type=str, default=None, help="Output directory to save the results")
     # Accept translated data from_file,
     parser.add_argument("--from_file", action="store_true", help="Evaluate from file")
     parser.add_argument("--predictions_file", type=str, default=None, help="Path to the transformed data")
-    
-
-
     
     args = parser.parse_args()
     task = args.task
@@ -311,14 +298,16 @@ if __name__=="__main__":
             print("Evaluating pipeline")
             evaluate_mt_bleu(args.DATAFILE_L1, args.DATAFILE_L2, args.TOKENIZER_INPATH, args.MODEL_INPATH, SEED = 42,  \
                     charbleu = False, \
-                        save_results = args.save_results, output_dir = args.output_dir, \
+                        save_results = args.save_results, record_file=args.record_file, \
+                        output_dir = args.output_dir, \
                         EXP_ID = args.EXP_ID)
         else:
             # Assume we evaluate from file
             print("Evaluating from file")
             # evaluate_mt_bleu_from_file(args.EXP_ID, args.DATAPATH, args.transformed_datapath, save_results = args.save_results, charbleu = True)
             evaluate_mt_bleu_from_file(references_file=args.DATAFILE_L2, predictions_file=args.predictions_file, \
-                                       save_results=args.save_results, charbleu=False, EXP_ID=args.EXP_ID, \
+                                       save_results=args.save_results, record_file=args.record_file, \
+                                        charbleu=False, EXP_ID=args.EXP_ID, \
                                     inputs_file=args.DATAFILE_L1)
                     
     # see_results()
