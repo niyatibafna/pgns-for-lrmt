@@ -450,7 +450,7 @@ def get_dataset_split(DATAFILE_L1, DATAFILE_L2, max_lines, tokenizer, max_length
     dataset = dataset.with_format("torch")
     return dataset
 
-def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 512):
+def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 512, only_eval = False):
 
     '''
     This function assumes that the datadir contains train, dev, and test splits, 
@@ -463,12 +463,15 @@ def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 51
         DATAFILE_L2 = os.path.join(DATADIR_L2, split)
         return get_dataset_split(DATAFILE_L1, DATAFILE_L2, max_lines, tokenizer, max_length = max_length)
 
-    ### UNCOMMENT THIS TO ALSO USE TRAIN
-    # train_dataset = get_split("train")
-    # dev_dataset = get_split("dev")
+    if only_eval:
+        test_dataset = get_split("test")
+        logging.info("Length of test dataset: {}".format(len(test_dataset)))
+        return test_dataset, test_dataset, test_dataset
+    
+    train_dataset = get_split("train")
+    dev_dataset = get_split("dev")
     test_dataset = get_split("test")
-    logging.info("Length of test dataset: {}".format(len(test_dataset)))
-    return test_dataset, test_dataset, test_dataset
+
 
     ## Split dataset into train, dev, and test if no splits are provided
     # dataset = dataset.train_test_split(test_size=0.2, seed=SEED)
@@ -480,11 +483,11 @@ def get_mt_dataset(DATADIR_L1, DATADIR_L2, max_lines, tokenizer, max_length = 51
 
     # Log all sizes
     # logging.info("Length of dataset: {}".format(len(dataset)))
-    # logging.info("Length of train dataset: {}".format(len(train_dataset)))
-    # logging.info("Length of dev dataset: {}".format(len(dev_dataset)))
-    # logging.info("Length of test dataset: {}".format(len(test_dataset)))
+    logging.info("Length of train dataset: {}".format(len(train_dataset)))
+    logging.info("Length of dev dataset: {}".format(len(dev_dataset)))
+    logging.info("Length of test dataset: {}".format(len(test_dataset)))
     
-    # return train_dataset, dev_dataset, test_dataset
+    return train_dataset, dev_dataset, test_dataset
 
 def compute_metrics(pred):
     '''Compute BLEU score'''
@@ -663,7 +666,9 @@ def main(args):
     logging.info("Getting datasets...")
     # Get dataset splits, and preprocess them
     train_dataset, dev_dataset, test_dataset = \
-    get_mt_dataset(args.DATADIR_L1, args.DATADIR_L2, max_lines=args.max_lines, tokenizer= tokenizer, max_length= args.max_length)
+    get_mt_dataset(args.DATADIR_L1, args.DATADIR_L2, max_lines=args.max_lines,\
+                    tokenizer= tokenizer, max_length= args.max_length,\
+                        only_eval = args.only_eval)
     
     # Instead of that, download some MT dataset from HF
     # tokenizer = AutoTokenizer.from_pretrained(args.ENC_DEC_MODELPATH)
@@ -720,12 +725,10 @@ def main(args):
         callbacks=[CustomTensorboardCallback],
     )   
 
-    
-    
-    logging.info(f"CUDA: {torch.cuda.is_available()}")
-    print(f"Model device: {model_enc_dec.device}")
-
     if not args.only_eval:
+        logging.info(f"CUDA available: {torch.cuda.is_available()}")
+        print(f"Model device: {model_enc_dec.device}")
+
         logging.info("STARTING TRAINING")
         trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
