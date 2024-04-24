@@ -3,8 +3,8 @@ This is the code for [Pointer-Generator Networks for Low-Resource Machine Transl
 Train MT with PGNs like this:
 ```
 python pgn.py \
---DATADIR_L1 /export/b08/nbafna1/data/europarl.es-ca/splits/es/ \
---DATADIR_L2 /export/b08/nbafna1/data/europarl.es-ca/splits/ca/ \
+--DATADIR_L1 /export/b08/nbafna1/data/nllb/hin-bho/splits/hin \
+--DATADIR_L2 /export/b08/nbafna1/data/nllb/hin-bho/splits/bho \
 --TOKENIZER_INPATH $TOKENIZER_INPATH \
 --OUTPUT_DIR $MODEL_OUTPUT_DIR --LOG_DIR $LOG_DIR --epochs $epochs --batch_size $batch_size \
 --max_lines $max_lines
